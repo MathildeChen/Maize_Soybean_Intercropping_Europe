@@ -540,13 +540,115 @@ alloc_maps <- res1 %>%
   }) ; alloc_maps[[2]]
 
 
+# Maps - maize and soybean allocation in EU when grown in 
+# intercropping or as sole crops 
+# surface displayed per pixel (rather than presence/absence)
+alloc_maps_surf_pixel <- res1 %>%
+  # > Keep the data for the figure (reference values)
+  filter(pLER_s == 0.56,
+         pLER_m == 0.79,          
+         freq_crop == 0.25) %>% 
+  split(.$target_soybean_lab) %>% 
+  map(., ~{
+    
+    tab_i <- .x %>% 
+      filter(pixel_reach_equal_prod==1) %>% 
+      # > pixel where maize as sole crop could be grown
+      mutate(pixel_maize_solecropping = if_else(pixel_solecropping == 0 & pixel_landsaving == 0, 1, 0)) %>%
+      # > keep useful columns 
+      dplyr::select(x, y, area, target_soybean_lab, pixel_intercropping, "pixel_soybean_solecropping"="pixel_solecropping", pixel_maize_solecropping, pixel_landsaving) %>% 
+      gather(key = pixel_type, value = pixel_color, starts_with("pixel_")) %>%
+      mutate(Crop_Design_lab = case_when(
+        pixel_type == "pixel_intercropping"         ~ "Maize-soybean intercropping", 
+        pixel_type == "pixel_soybean_solecropping"  ~ "Soybean as sole crop", 
+        pixel_type == "pixel_maize_solecropping"    ~ "Maize as sole crop", 
+        pixel_type == "pixel_landsaving"            ~ "Land saved by intercropping")) %>% 
+      mutate(Crop_Design_lab = factor(Crop_Design_lab, levels = c("Maize-soybean intercropping",
+                                                                  "Soybean as sole crop", 
+                                                                  "Maize as sole crop", 
+                                                                  "Land saved by intercropping"))) %>%
+      mutate(Crop_Design_lab2 = if_else(Crop_Design_lab == "Maize-soybean intercropping", "Intercropping", "Sole crops")) %>% 
+      mutate(target_soybean_lab = paste0("Soybean self-sufficiency level: ", target_soybean_lab)) %>% 
+      filter(pixel_color==1)
+    
+    # Maps surface
+    p <- plot_grid(
+      # > Intercropping
+      ggplot() +
+        geom_sf(data=eu27, fill="grey35", color="transparent") +
+        geom_tile(data = tab_i %>% filter(pixel_type == "pixel_intercropping"), 
+                  aes(x=x, y=y, fill = pixel_color*area/10^3)) +
+        scale_fill_gradientn(colours = c("white", "#0D0887FF"), guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", barwidth=15, barheight=0.7), limits = c(0,180)) +
+        geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
+        theme_map() + 
+        theme(strip.background = element_rect(fill="lightgrey", color="transparent"),
+              strip.text.x = element_text(size=25),
+              legend.text = element_text(size=25),
+              legend.title = element_text(size=25),
+              legend.title.position = "top",
+              title = element_text(size=25)) +
+        facet_grid(. ~ Crop_Design_lab, switch = "y") +
+        lims(x = c(-11,35), y=c(33,70)) +
+        #ggtitle(paste0(unique(tab_i$target_soybean_lab))) +
+        ggtitle("a. Geographical allocation"),
+      # > Sole soybean
+      ggplot() +
+        geom_sf(data=eu27, fill="grey35", color="transparent") +
+        geom_tile(data = tab_i %>% filter(pixel_type == "pixel_soybean_solecropping"), 
+                  aes(x=x, y=y, fill = pixel_color*area/10^3)) +
+        scale_fill_gradientn(colours = c("white", "#8405A7FF"), guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", barwidth=15, barheight=0.7), limits = c(0,180)) +
+        geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
+        theme_map() + 
+        theme(strip.background = element_rect(fill="lightgrey", color="transparent"),
+              strip.text.x = element_text(size=25),
+              legend.text = element_text(size=25),
+              legend.title = element_text(size=25),
+              legend.title.position = "top") +
+        facet_grid(. ~ Crop_Design_lab, switch = "y") +
+        lims(x = c(-11,35), y=c(33,70)), 
+      # > Sole maize
+      ggplot() +
+        geom_sf(data=eu27, fill="grey35", color="transparent") +
+        geom_tile(data = tab_i %>% filter(pixel_type == "pixel_maize_solecropping"), 
+                  aes(x=x, y=y, fill = pixel_color*area/10^3)) +
+        scale_fill_gradientn(colours = c("white", "#DF6263FF"), guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", barwidth=15, barheight=0.7), limits = c(0,180)) +
+        geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
+        theme_map() + 
+        theme(strip.background = element_rect(fill="lightgrey", color="transparent"),
+              strip.text.x = element_text(size=25),
+              legend.text = element_text(size=25),
+              legend.title = element_text(size=25),
+              legend.title.position = "top") +
+        facet_grid(. ~ Crop_Design_lab, switch = "y") +
+        lims(x = c(-11,35), y=c(33,70)),
+      # > Land saving
+      ggplot() +
+        geom_sf(data=eu27, fill="grey35", color="transparent") +
+        geom_tile(data = tab_i %>% filter(pixel_type == "pixel_landsaving"), 
+                  aes(x=x, y=y, fill = pixel_color*area/10^3)) +
+        scale_fill_gradientn(colours = c("white", "#F0F921FF"), guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", barwidth=15, barheight=0.7), limits = c(0,180)) +
+        geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
+        theme_map() + 
+        theme(strip.background = element_rect(fill="lightgrey", color="transparent"),
+              strip.text.x = element_text(size=25),
+              legend.text = element_text(size=25),
+              legend.title = element_text(size=25), legend.title.position = "top") +
+        facet_grid(. ~ Crop_Design_lab, switch = "y") +
+        lims(x = c(-11,35), y=c(33,70)),
+      nrow=1, align="hv"
+      
+    ) 
+    
+  }) ; alloc_maps_surf_pixel[["50%"]]
+
+
 # Total surface 
 alloc_surf <- res3 %>%
   filter(pLER_s == 0.56,
          pLER_m == 0.79,          
          #target_soybean %in% c(22.50, 33.75), 
          freq_crop == 0.25) %>% 
-  split(.$target_soybean) %>%
+  split(.$target_soybean_lab) %>%
   map(., ~{
     
     .x %>% 
@@ -554,8 +656,8 @@ alloc_surf <- res3 %>%
       mutate(to_keep = if_else(strategy=="intercrop" & crop =="crop 2", 0, 1)) %>% 
       filter(to_keep == 1) %>% 
       # > re-label crop and strategy
-      mutate(crop = if_else(strategy=="intercrop", "Int.", crop),
-             crop = factor(crop, levels = c("Int.", "landsaving", "crop 2", "crop 1"))) %>% 
+      mutate(crop = if_else(strategy=="intercrop", "Maize-soybean intercropping", crop),
+             crop = recode(crop, "landsaving"="Land saved by intercropping", "crop 1"="Soybean as sole crop", "crop 2" = "Maize as sole crop")) %>% 
       mutate(strategy = recode(strategy, "intercrop"="Int", "sole crop"="SC")) %>% 
       ggplot(data=.) +
       # > total surface covered by each strategy
@@ -563,24 +665,30 @@ alloc_surf <- res3 %>%
                col="transparent", width=0.75) +
       # > total surface available for production (25% of European cropland)
       geom_hline(yintercept=num_eu_cropland25, 
-                 color="darkorange", linetype = 2, lwd=1.5) + 
+                 color="black", linetype = 2, lwd=2) +
+      annotate("text", x = 2.7, y = num_eu_cropland25, 
+               label = "25% of\ncroplands\nin the EU", hjust=0, size=9,
+               color="black", fontface = 'italic') + 
+      coord_cartesian(clip = "off", xlim = c(1, 2)) + 
       theme_cowplot() + 
       theme(strip.background = element_blank(),
             strip.text = element_blank(),
-            legend.position = "none",
+            legend.position = "bottom",
+            legend.text = element_text(size=25),
             panel.border = element_rect(color="black"),
             title = element_text(size=25),
             axis.text = element_text(size=25),
             axis.title = element_text(size=25),
             plot.margin = unit(c(0,4,0,0), "cm")) +
       facet_wrap(.~target_soybean_lab, ncol=1) +
-      scale_fill_manual(values = c("#3CBC75FF", "purple", "#FDE725FF","#2D718EFF"), 
-                        guide=guide_legend("", ncol = 2, position = "bottom")) +
-      ggtitle("") +
-      labs(x = "", y = "Total area (Mha)") +
-      lims(y=c(0,32))
+      scale_fill_manual(values = c("#0D0887FF", "#8405A7FF", "#DF6263FF","#F0F921FF"), 
+                        limits=c("Maize-soybean intercropping", "Soybean as sole crop", "Maize as sole crop", "Land saved by intercropping"), 
+                        guide=guide_legend("", nrow = 1, position = "bottom")) +
+      ggtitle("b. Area") +
+      labs(x = "", y = "Total (Mha)") +
+      lims(y=c(0,27))
     
-  })
+  }) ; alloc_surf$`50%`
 
 # Total co-production of maize and soybean in each strategy
 alloc_prod <- res3 %>%
@@ -588,7 +696,7 @@ alloc_prod <- res3 %>%
          pLER_m == 0.79,          
          #target_soybean %in% c(22.50, 33.75), 
          freq_crop == 0.25) %>% 
-  split(.$target_soybean) %>%
+  split(.$target_soybean_lab) %>%
   map(., ~{
     
     # Total production
@@ -607,7 +715,11 @@ alloc_prod <- res3 %>%
       geom_col(aes(x=strategy , y = sum/10^6, fill=crop2, col=crop),
                width=0.75, linewidth=1) + 
       # > production target for soybean 
-      geom_hline(aes(yintercept=target_soybean), color="red", linetype = 2, lwd=1.5) + 
+      geom_hline(aes(yintercept=target_soybean), color="black", linetype = 2, lwd=2) + 
+      annotate("text", x = 2.7, y = as.numeric(as.character(unique(.x$target_soybean))), hjust=0, size=9,
+               label = paste0(unique(.x$target_soybean_lab), "\nsoybean\nself-sufficiency"), 
+               color="black", fontface = 'italic') + 
+      coord_cartesian(clip = "off", xlim = c(1, 2)) + 
       theme_cowplot() + 
       theme(strip.background = element_blank(),
             strip.text = element_blank(),
@@ -618,48 +730,33 @@ alloc_prod <- res3 %>%
             axis.title = element_text(size=25),
             plot.margin = unit(c(0,4,0,0), "cm")) +
       facet_wrap(.~target_soybean_lab, scales = "free", ncol=1) +
-      scale_color_manual(values = c("#3CBC75FF", "purple", "#FDE725FF","#2D718EFF"), 
+      scale_color_manual(values = c("#0D0887FF", "#F0F921FF", "#DF6263FF","#8405A7FF"), 
                         guide=guide_legend("", ncol = 2, position = "bottom")) +
-      scale_fill_manual(values = c("purple", "#FDE725FF","#2D718EFF"), 
+      scale_fill_manual(values = rev(c("#8405A7FF", "#DF6263FF","#F0F921FF")), 
                         guide=guide_legend("", ncol = 2, position = "bottom")) +
-      ggtitle("") +
-      labs(x = "", y = "Total co-production (Mt)") +
-      lims(y=c(0,200))
+      ggtitle("c. Production") +
+      labs(x = "", y = "Total (Mt)") +
+      lims(y=c(0,170))
     
-  })
-
+  }) ; alloc_prod$`50%`
 
 # Merge plots
 #leg_p4 <- get_legend(plot = p4_maps$'22.5')
 
-leg_p3 = cowplot::get_plot_component(alloc_maps[[2]], 'guide-box-bottom', return_all = TRUE)
+leg_p3 = cowplot::get_plot_component(alloc_surf[[2]], 'guide-box-bottom', return_all = TRUE)
 
-p3 <- plot_grid(plot_grid(alloc_maps[[2]] + 
-                            theme(legend.position = "none", 
-                                  strip.background.y = element_blank(),
-                                  #strip.text.y.left = element_blank(color="white"),
-                                  title = element_text(size = 25)) + ggtitle("a."), 
-                          #ggplot() + theme_void(),
+p3 <- plot_grid(plot_grid(alloc_maps_surf_pixel[[2]], 
+                          ggplot() + theme_void(),
                           plot_grid(ggplot() + theme_void(),
-                                    alloc_surf[[2]] + 
-                                      annotate("text", x = 2.7, y = num_eu_cropland25, 
-                                               label = "25% of\ncroplands\nin the EU", hjust=0, size=9,
-                                               color="darkorange", fontface = 'italic') + 
-                                      coord_cartesian(clip = "off", xlim = c(1, 2)) +
-                                      ggtitle("b."),   
+                                    alloc_surf[[2]] + theme(legend.position = "none"),   
                                     ggplot() + theme_void(),
-                                    alloc_prod[[2]]  + 
-                                      annotate("text", x = 2.7, y = 18.15, hjust=0, size=9,
-                                               label = "50%\nsoybean\nself-sufficiency", 
-                                               color="red", fontface = 'italic') + 
-                                      coord_cartesian(clip = "off", xlim = c(1, 2)) + 
-                                      ggtitle("c."), 
+                                    alloc_prod[[2]] + theme(legend.position = "none"), 
                                     ggplot() + theme_void(),
                                     nrow=1, rel_widths = c(0.17, 0.25,0.15,0.25,0.18)),  
-                          ncol=1, align="hv", #rel_heights = c(0.55,0.4),
+                          ncol=1, align="hv", rel_heights = c(0.425,0.05,0.425),
                           axis = "btrl"), 
                 #cowplot::ggdraw(leg_p3),
-                plot_grid(ggplot() + theme_void(), cowplot::ggdraw(leg_p3), ggplot() + theme_void(), nrow=1, rel_widths = c(0.3,0.55,0.15)),
+                plot_grid(ggplot() + theme_void(), cowplot::ggdraw(leg_p3), ggplot() + theme_void(), nrow=1, rel_widths = c(0.1,0.75,0.15)),
                 ncol=1, rel_heights = c(0.94,0.06), align="hv", axis = "btrl"
                 )
 # Save
@@ -671,6 +768,35 @@ ggsave(p3,
        filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/03_landsaving.pdf", 
        width=18, height=22, bg="white", dpi=300)
 
+# Automatic saving figures for the 3 self-sufficiency levels
+path_fig <- "D:/Mes Donnees/POSTDOC INRAE/PAPERS/02_PNAS/02_Figures/"
+
+for(i in unique(res1$target_soybean_lab))
+{
+  
+  # legend 
+  leg_p3 = cowplot::get_plot_component(alloc_surf[[paste0(i)]], 'guide-box-bottom', return_all = TRUE)
+  # plot
+  p3 <- plot_grid(plot_grid(alloc_maps_surf_pixel[[paste0(i)]], 
+                            ggplot() + theme_void(),
+                            plot_grid(ggplot() + theme_void(),
+                                      alloc_surf[[paste0(i)]] + theme(legend.position = "none"),   
+                                      ggplot() + theme_void(),
+                                      alloc_prod[[paste0(i)]] + theme(legend.position = "none"), 
+                                      ggplot() + theme_void(),
+                                      nrow=1, rel_widths = c(0.17, 0.25,0.15,0.25,0.18)),  
+                            ncol=1, align="hv", rel_heights = c(0.425,0.05,0.425),
+                            axis = "btrl"), 
+                  #cowplot::ggdraw(leg_p3),
+                  plot_grid(ggplot() + theme_void(), cowplot::ggdraw(leg_p3), ggplot() + theme_void(), nrow=1, rel_widths = c(0.1,0.75,0.15)),
+                  ncol=1, rel_heights = c(0.94,0.06), align="hv", axis = "btrl"
+  )
+  # save
+  ggsave(p3,
+         filename = paste0(path_fig, "03_landsaving_", gsub("%", "", i), ".png"), 
+         width=22, height=18, bg="white", dpi=300)
+  
+}
 
 
 
