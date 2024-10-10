@@ -11,7 +11,6 @@ library(tidyverse)
 library(stringr)
 library(lubridate)
 library(terra) ; library(rnaturalearth)
-library(CCMHr)
 library(cowplot)
 library(wesanderson)
 library(metR)
@@ -25,7 +24,9 @@ world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
 europe <- rnaturalearth::ne_countries(continent = "europe", scale = "medium", returnclass = "sf")
 eu27 <- rnaturalearth::ne_countries(country = c('Finland', 'Sweden', 'Estonia', 'Latvia', 'Denmark', 'Lithuania', 
                                                 'Ireland', 'Germany', 'Poland', 'Netherlands', 'Belgium', 'France', 
-                                                'Czech Republic', 'Luxembourg', 'Slovakia', 'Austria', 'Hungary', 
+                                                #'Czech Republic', 
+                                                'Czechia',
+                                                'Luxembourg', 'Slovakia', 'Austria', 'Hungary', 
                                                 'Romania', 'Italy', 'Slovenia', 'Croatia', 'Bulgaria', 'Spain', 'Portugal', 
                                                 'Greece', 'Northern Cyprus', 'Cyprus'), scale = "medium", returnclass = "sf")
 not_eu27 <- rnaturalearth::ne_countries(country = c('Norway', 'United Kingdom', 'Belarus', 'Ukraine', 'Moldova', 'Switzerland', 
@@ -33,7 +34,9 @@ not_eu27 <- rnaturalearth::ne_countries(country = c('Norway', 'United Kingdom', 
                                                    'Albania', 'Macedonia', 'Turkey', 'Azerbaijan', 'Armenia'), scale = "medium", returnclass = "sf")
 eu27_ext <- rnaturalearth::ne_countries(country = c('Finland', 'Sweden', 'Estonia', 'Latvia', 'Denmark', 'Lithuania', 
                                                     'Ireland', 'Germany', 'Poland', 'Netherlands', 'Belgium', 'France', 
-                                                    'Czech Republic', 'Luxembourg', 'Slovakia', 'Austria', 'Hungary', 
+                                                    #'Czech Republic', 
+                                                    'Czechia',
+                                                    'Luxembourg', 'Slovakia', 'Austria', 'Hungary', 
                                                     'Romania', 'Italy', 'Slovenia', 'Croatia', 'Bulgaria', 'Spain', 'Portugal', 
                                                     'Greece', 'Northern Cyprus', 'Cyprus', 
                                                     'Norway', 'United Kingdom', 'Belarus', 'Ukraine', 'Moldova', 'Switzerland', 
@@ -109,18 +112,26 @@ format_alloc <- function(results_allocations)
 # ----------------------------------------
 # Data
 
+# PC
 # > Predicted yields - Europe
 load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_preds/04_EU/Ya_pred_eu_2000_2023.rda")
-
 # > EU coordinates
 load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_dat_coords_EU.rda")
-
 # > MAIN ANALYSIS : Results of simulations
 #   of soybean and maize allocations in Europe
 #   in EU27, on pixels with mean yield > 1 t/ha
 #   (previously computed using the 03_Allocation_europe_full_simulations.R script)
 allocations <- CCMHr::loadRDa("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/allocations_soybean_maize_eu_restricted_min_rdt_check.rda")
 #load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/allocations_soybean_maize_eu_restricted.rda")
+
+# CIRAD
+# > Predicted yields - Europe
+load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/Ya_pred_eu_2000_2023.rda")
+# > EU coordinates
+load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/00_dat_coords_EU.rda")
+# > MAIN ANALYSIS : Results of simulations
+load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/allocations_soybean_maize_eu_restricted_min_rdt_check.rda")
+allocations <- sensi_allocations ; rm(sensi_allocations)
 
 # ----------------------------------------
 # ------------- MAIN ANALYSIS ------------ 
@@ -385,94 +396,6 @@ tab_p2 <- res2 %>%
 
 save(tab_p2, file = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.rda")
 
-# Check with sensitivity analysis with intercropped soybean 
-# restricted to areas where soybean yield > mean in EU (2.8 t.ha-1)
-
-allocations_sensi_p2 <- CCMHr::loadRDa("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/sensi/allocations_soybean_maize_eu_restricted_mean_rdt_check.rda")
-res2_sensi_p2 <- format_alloc(results_allocations =  allocations_sensi_p2 %>% map_dfr(., ~{.x$res1}, .id="scenario"))
-
-res2_sensi_p2 %>% 
-  # > Keep results for the plot
-  filter(target_soybean_lab == "100%",        # soybean target production = 100% consumption
-         strategy == "Intercropping", # intercropping
-         crop == "Soybean",           # soybean
-         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
-         pLER_m == 0.79               # pLER maize is set as reference value
-  ) %>%
-  # > Self-sufficiency coverage for each scenario 
-  mutate(perc_eu_supply=(production/(target_soybean*10^6))*100,
-         perc_eu_supply=if_else(perc_eu_supply>100, 100, perc_eu_supply), 
-         surface = surface/10^6,
-         production=production/10^6) %>%
-  dplyr::select(freq_crop_lab, pLER_s, surface, production, perc_eu_supply) %>%
-  gather(key=var, value=val, -freq_crop_lab, -pLER_s) %>%
-  mutate(val=round(val,1)) %>%
-  spread(key=freq_crop_lab, value=val) %>%
-  arrange(var, pLER_s)
-
-#    pLER_s            var 1 year in 4
-# 1   0.56 perc_eu_supply        15.0
-# 2   0.56     production         5.4
-# 3   0.56        surface         3.1
-
-res2_sensi_p2 %>% 
-  # > Keep results for the plot
-  filter(target_soybean == 36.3,        # soybean target production = 100% consumption
-         strategy == "Intercropping", # intercropping
-         crop == "Soybean",           # soybean
-         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
-         pLER_m == 0.79               # pLER maize is set as reference value
-  ) %>%
-  # > Self-sufficiency coverage for each scenario 
-  mutate(perc_eu_supply=(production/(36.3*10^6))*100) %>%
-  # > Reference values as reference for the dotted lines
-  mutate(pLER_lab = case_when(
-    pLER_lab == "References values for pLERs"~0, 
-    TRUE~1)) %>% 
-  # > Plot
-  ggplot(., aes(x = freq_crop_lab, 
-                y = perc_eu_supply,
-                group=pLER_s)) +
-  geom_hline(yintercept = c(25, 50, 75, 100), 
-             linetype=1, 
-             color = "grey90") +
-  geom_line(aes(color=as.factor(pLER_s)),
-            linewidth=1.2) +
-  geom_line(aes(alpha=as.factor(pLER_lab)), 
-            linewidth=1, color="white", linetype=3) +
-  geom_point(aes(color=as.factor(pLER_s), shape=as.factor(pLER_s)), 
-             size=3) +
-  # current level of self-sufficiency (cake+grain)
-  geom_hline(yintercept = 16, color='black', lty=2) +
-  annotate("text", x = 6.75, y = 16, hjust=0, 
-           label = "Current\nself-sufficiency\nrate in\nthe EU: 16%", 
-           color="black", fontface = 'italic') +
-  scale_color_manual(values = c(viridis::viridis(6)[4:6], 
-                                viridis::inferno(direction = -1, 6)[2:4])) +
-  scale_alpha_manual(values = c(0,1), guide=guide_none()) +
-  scale_y_continuous(breaks = c(25,50,75,100)) +
-  guides(color = guide_legend(title = "Partial land equivalent ratio for soybean", reverse = T, nrow=2),
-         shape = guide_legend(title = "Partial land equivalent ratio for soybean", reverse = T, nrow=2)) +
-  theme_cowplot() +
-  theme(strip.text.y = element_text(angle=0, size=11),
-        strip.text.x = element_text(size=11),
-        axis.text = element_text(size=11),
-        axis.title = element_text(size=11),
-        panel.border = element_rect(color="black"),
-        legend.position = "bottom",
-        legend.title = element_text(size=11),
-        legend.text = element_text(size=10),
-        legend.background = element_rect(fill="white"),
-        plot.margin = unit(c(1,4,1,1), "cm")
-  ) +
-  #lims(y=c(0,101)) +
-  coord_cartesian(clip = "off", xlim=c(1,6)) +
-  labs(x = "\nReturn frequency", y = "Soybean self-sufficiency level (%)\n")
-
-# Save
-ggsave(filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2_mean_yield.png", 
-       width=22, height=18, bg="white", units = "cm", dpi=300)
-
 
 # -------------------------
 # Figure 3 - Area requirements to reach the same production
@@ -511,7 +434,7 @@ alloc_maps <- res1 %>%
                                     "Soybean as SC", 
                                     "Maize as SC",
                                     "Additional area required as maize in SC\nto reach the same co-production as Int")) %>% 
-        mutate(Crop_Design_lab2 = if_else(Crop_Design_lab == "Int", "Intercropping (Int)", "Sole crops (SC)")) %>% 
+      mutate(Crop_Design_lab2 = if_else(Crop_Design_lab == "Int", "Intercropping (Int)", "Sole crops (SC)")) %>% 
       mutate(target_soybean_lab = paste0("Soybean\nself-sufficiency\nlevel: ", target_soybean_lab))
     
     # Maps surface
@@ -740,6 +663,7 @@ alloc_prod <- res3 %>%
     
   }) ; alloc_prod$`50%`
 
+
 # Merge plots
 #leg_p4 <- get_legend(plot = p4_maps$'22.5')
 
@@ -800,6 +724,7 @@ for(i in unique(res1$target_soybean_lab))
 
 
 
+
 p4 <- plot_grid(
   plot_grid(p4_surf_barplots[[1]] + annotate("text", x = 2.2, y = num_eu_cropland25-4, 
                                              label = "25% of\ncroplands\nin the EU", hjust=1,
@@ -851,7 +776,215 @@ save(tab_p4, file="E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/04_la
 # ------------------------------------------------------#
 
 # -------------------------
+# PC
 path_alloc <- "C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/"
+
+# CIRAD
+path_alloc <- "D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/"
+
+# -------------------------
+# > sensitivity analysis with different yield threshold 
+
+# > Soybean allocations based on yields projeted from various models 
+load(paste0(path_alloc, "sensi/sensi_1.rda"))
+sensi_1 <- sensi_allocations ; rm(sensi_allocations)
+
+load(paste0(path_alloc, "sensi/sensi_2_1.rda"))
+sensi_2_1 <- sensi_allocations ; rm(sensi_allocations)
+
+load(paste0(path_alloc, "sensi/sensi_2_2.rda"))
+sensi_2_2 <- sensi_allocations ; rm(sensi_allocations)
+
+# > Allocations and area requierements
+alloc_sensi_1 <- list("Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU)"          = allocations,
+                      "Areas with soybean mean yield equal or higher than 2.8 t.ha-1 (EU)"          = sensi_1,
+                      "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU extended)" = sensi_2_1,
+                      "Areas with soybean mean yield equal or higher than 2.8 t.ha-1 (EU extended)" = sensi_2_2)
+
+# > Shapping allocations results
+# Allocations
+sensi_1_data_res <- format_alloc(results_allocations =  alloc_sensi_1 %>% 
+                                   map_dfr(., ~{ 
+                                     
+                                     map_dfr(.x, ~{ .x$data_res }, .id="scenario")
+                                     
+                                   }, .id="sensi_set")) %>% 
+  # > Set of sensitivity analyses
+  mutate(sensi_set = recode(sensi_set, 
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 2.8 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                            "Areas with soybean mean yield equal or higher than 2.8 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU extended)" )) %>%
+  mutate(sensi_set = factor(sensi_set, levels=c("Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                                                "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU extended)" )))
+
+# Surface required to cover different shares of 
+#    EU's consumption of soybean 
+sensi_2_res1 <- format_alloc(results_allocations =  alloc_sensi_1 %>% 
+                               map_dfr(., ~{ 
+                                 
+                                 map_dfr(.x, ~{ .x$res1 }, .id="scenario")
+                                 
+                               }, .id="sensi_set")) %>%
+  # > Set of sensitivity analyses
+  mutate(sensi_set_lab = recode(sensi_set, 
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 2.8 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                            "Areas with soybean mean yield equal or higher than 2.8 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU extended)" )) %>%
+  mutate(sensi_set_lab = factor(sensi_set_lab, levels=c("Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                                                "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU extended)" )))
+
+# Surface required to produce the same production (maize+soybean)
+#    as intercropping 
+sensi_2_res3 <- format_alloc(results_allocations =  alloc_sensi_1 %>% 
+                               map_dfr(., ~{ 
+                                 
+                                 map_dfr(.x, ~{ .x$res3 }, .id="scenario")
+                                 
+                               }, .id="sensi_set")) %>%
+  mutate(sensi_set = recode(sensi_set, 
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 2.8 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                            "Areas with soybean mean yield equal or higher than 2.8 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU extended)" )) %>%
+  mutate(sensi_set = factor(sensi_set, levels=c("Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                                                "Mean yield\nequal or higher\nthan 2.8 t.ha-1\n(EU extended)" )))
+
+# > Compare with main analysis
+sensi_2_res1 %>% 
+  filter(pLER_s==0.56, pLER_m==0.79, freq_crop == 0.25, target_soybean_lab == "75%") %>% 
+  dplyr::select(sensi_set, crop, strategy, surface) %>% 
+  spread(key = strategy, value = surface)
+
+sensi_2_res3 %>% 
+  filter(pLER_s==0.56, pLER_m==0.79, freq_crop == 0.25, target_soybean_lab == "75%") %>% 
+  dplyr::select(sensi_set, crop, strategy, total_production) %>% 
+  spread(key = strategy, value = total_production)
+
+sensi_2_res3 %>% 
+  filter(pLER_s==0.56, pLER_m==0.79, freq_crop == 0.25, target_soybean_lab == "75%") %>% 
+  dplyr::select(sensi_set, crop, strategy, total_surface) %>% 
+  spread(key = strategy, value = total_surface)
+
+# > % of self-sufficiency reached in each scenario
+#   depending on pLER and crop frequency
+sensi_2_res1 %>% 
+  # > Keep results for the plot
+  filter(target_soybean_lab == "100%",        # soybean target production = 100% consumption
+         strategy == "Intercropping", # intercropping
+         crop == "Soybean",           # soybean
+         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
+         pLER_m == 0.79               # pLER maize is set as reference value
+  ) %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(perc_eu_supply=(production/(36.3*10^6))*100) %>%
+  # > Reference values as reference for the dotted lines
+  mutate(pLER_lab = case_when(
+    pLER_lab == "References values for pLERs"~0, 
+    TRUE~1)) %>% 
+  mutate(pLER_s=paste0("Soybean pLER = ", pLER_s)) %>%
+  # > Plot
+  ggplot(., aes(x = freq_crop_lab, 
+                y = perc_eu_supply,
+                group=sensi_set)) +
+  # current level of self-sufficiency (cake+grain)
+  geom_hline(yintercept = 16, color='red', lty=2) +
+  geom_hline(yintercept = c(25, 50, 75, 100), 
+             linetype=2, 
+             color = "grey90") +
+  geom_line(aes(color=as.factor(sensi_set)), #linetype = 2,
+            linewidth=0.75) +
+  geom_point(aes(color=as.factor(sensi_set), shape=as.factor(sensi_set)), 
+             size=2) +
+  scale_color_manual(values = pal[c(1,3,4,5)])+
+  scale_linetype_manual(values=c(2,1), guide=guide_none()) +
+  scale_y_continuous(breaks=c(25,50,75,100))+
+  guides(color = guide_legend(title = "", ncol=1),
+         shape=guide_legend(title = "", ncol=1)) +
+  theme_cowplot() +
+  theme(strip.text.y = element_text(angle=0, size=11),
+        strip.text.x = element_text(size=11),
+        axis.text.y = element_text(size=11), 
+        axis.text.x = element_text(size=11, 
+                                   angle=45, 
+                                   vjust = 0.85, hjust = 0.9),
+        axis.title = element_text(size=11),
+        legend.position = "bottom",
+        legend.title = element_text(size=11),
+        legend.text = element_text(size=10)) +
+  #lims(y=c(0,101)) +
+  labs(x = "\nReturn frequency", y = "Soybean self-sufficiency level (%)\n") +
+  facet_wrap(.~pLER_s, nrow=1) 
+
+# other presentation
+sensi_2_res1 %>% 
+  # > Keep results for the plot
+  filter(target_soybean_lab == "100%",        # soybean target production = 100% consumption
+         strategy == "Intercropping", # intercropping
+         crop == "Soybean") %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(perc_eu_supply=(production/(36.3*10^6))*100) %>%
+  # > Plot
+  ggplot(., aes(x = freq_crop_lab, 
+                y = perc_eu_supply,
+                group=pLER_s)) +
+  # current level of self-sufficiency (cake+grain)
+  geom_hline(yintercept = 16, color='red', lty=2) +
+  geom_hline(yintercept = c(25, 50, 75, 100), 
+             linetype=2, 
+             color = "grey90") +
+  geom_line(aes(color=as.factor(pLER_s)), #linetype = 2,
+            linewidth=0.75) +
+  geom_point(aes(color=as.factor(pLER_s), shape=as.factor(pLER_s)), 
+             size=2) +
+  scale_color_manual(values = c(viridis::viridis(6)[4:6], 
+                                viridis::inferno(direction = -1, 6)[2:4])) +
+  scale_linetype_manual(values=c(2,1), guide=guide_none()) +
+  scale_y_continuous(breaks=c(25,50,75,100))+
+  guides(color = guide_legend(title = "", ncol=1),
+         shape=guide_legend(title = "", ncol=1)) +
+  theme_cowplot() +
+  theme(strip.text.y = element_text(angle=0, size=11),
+        strip.text.x = element_text(size=11),
+        axis.text.y = element_text(size=11), 
+        axis.text.x = element_text(size=11, 
+                                   angle=45, 
+                                   vjust = 0.85, hjust = 0.9),
+        axis.title = element_text(size=11),
+        #legend.position = "bottom",
+        legend.title = element_text(size=11),
+        legend.text = element_text(size=10)) +
+  #lims(y=c(0,101)) +
+  labs(x = "\nReturn frequency", y = "Soybean self-sufficiency level (%)\n") +
+  facet_wrap(.~sensi_set_lab, nrow=1) 
+
+sensi_2_res1 %>% 
+  # > Keep results for the plot
+  filter(target_soybean_lab == "100%",        # soybean target production = 100% consumption
+         strategy == "Intercropping", # intercropping
+         crop == "Soybean") %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(perc_eu_supply=(production/(36.3*10^6))*100) %>% 
+  filter(pLER_s==0.56, freq_crop==0.25) %>% 
+  dplyr::select(sensi_set, production, surface, perc_eu_supply)
+
+#                                                                    sensi_set production  surface perc_eu_supply
+#1          Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU)   33131294 25001535       91.27078
+#2          Areas with soybean mean yield equal or higher than 2.8 t.ha-1 (EU)    5436812  3147557       14.97744
+#3 Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU extended)   32839809 25004410       90.46779
+#4 Areas with soybean mean yield equal or higher than 2.8 t.ha-1 (EU extended)    6473288  3755520       17.83275
+
+
+
+
+
 
 # -------------------------
 # > sensitivity analyses with different yield predictive models 
@@ -1203,51 +1336,52 @@ sensi_1_res1 %>%
 
 # Sets of pixels with productivity higher than a certain threshold
 # > pixels with yields >1 t/ha
-sensi_2_pixels <- Ya_pred_eu %>% 
-  filter(model=="pca.m.2", crop=="soybean") %>% 
-  group_by(x, y, id_eu27) %>% 
-  summarise(mean_Ya_pred = mean(Ya_pred)) %>%
-  mutate(cat_pixel_main  = if_else(mean_Ya_pred >= 1 & id_eu27 == 1, 1, 0),
-         cat_pixel_sensi = if_else(mean_Ya_pred >= 2 & id_eu27 == 1, 1, 0))
-
-plot_grid(
-  ggplot() +
-    geom_sf(data = eu27, fill="grey94") +
-    geom_tile(data=sensi_2_pixels, 
-              aes(x=x,y=y, fill=as.factor(cat_pixel_main))) +
-    geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) +
-    geom_sf(data = russia, fill="white", color="white") +
-    geom_sf(data = not_eu27, fill="white") +
-    geom_sf(data = eu27, fill="transparent") +
-    theme_map() + #theme(plot.title = element_text(size=10)) +
-    lims(x = c(-11,51), y=c(33,71)) +
-    scale_fill_manual(values = c("transparent", viridis::viridis(4)[2]), guide=guide_none()) + 
-    ggtitle("a. Main analysis:\ngrid-cells with soybean mean yield > 1 t ha-1 (N=2047)"),
-  ggplot() +
-    geom_sf(data=eu27, fill="grey94") +
-    geom_tile(data=sensi_2_pixels, 
-              aes(x=x,y=y, fill=as.factor(cat_pixel_sensi))) +
-    geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) +
-    geom_sf(data = russia, fill="white", color="white") +
-    geom_sf(data = not_eu27, fill="white") +
-    geom_sf(data = eu27_ext, fill="transparent") +
-    theme_map() + #theme(plot.title = element_text(size=10)) +
-    lims(x = c(-11,51), y=c(33,71)) +
-    scale_fill_manual(values = c("transparent", viridis::inferno(5)[4]), guide=guide_none()) + 
-    ggtitle("b. Sensitivity analysis\ngrid-cells with soybean mean yield > 2 t ha-1 (N=1387)"),
-  nrow=1
-  
-)
-
-ggsave(filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/Sensitivity_analyses/sensi_2_pixels.png",
-       width = 12, height = 7, dpi=300, bg="white")
+#sensi_2_pixels <- Ya_pred_eu %>% 
+#  filter(model=="pca.m.2", crop=="soybean") %>% 
+#  group_by(x, y, id_eu27) %>% 
+#  summarise(mean_Ya_pred = mean(Ya_pred)) %>%
+#  mutate(cat_pixel_main  = if_else(mean_Ya_pred >= 1 & id_eu27 == 1, 1, 0),
+#         cat_pixel_sensi = if_else(mean_Ya_pred >= 2 & id_eu27 == 1, 1, 0))
+#
+#plot_grid(
+#  ggplot() +
+#    geom_sf(data = eu27, fill="grey94") +
+#    geom_tile(data=sensi_2_pixels, 
+#              aes(x=x,y=y, fill=as.factor(cat_pixel_main))) +
+#    geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) +
+#    geom_sf(data = russia, fill="white", color="white") +
+#    geom_sf(data = not_eu27, fill="white") +
+#    geom_sf(data = eu27, fill="transparent") +
+#    theme_map() + #theme(plot.title = element_text(size=10)) +
+#    lims(x = c(-11,51), y=c(33,71)) +
+#    scale_fill_manual(values = c("transparent", viridis::viridis(4)[2]), guide=guide_none()) + 
+#    ggtitle("a. Main analysis:\ngrid-cells with soybean mean yield > 1 t ha-1 (N=2047)"),
+#  ggplot() +
+#    geom_sf(data=eu27, fill="grey94") +
+#    geom_tile(data=sensi_2_pixels, 
+#              aes(x=x,y=y, fill=as.factor(cat_pixel_sensi))) +
+#    geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) +
+#    geom_sf(data = russia, fill="white", color="white") +
+#    geom_sf(data = not_eu27, fill="white") +
+#    geom_sf(data = eu27_ext, fill="transparent") +
+#    theme_map() + #theme(plot.title = element_text(size=10)) +
+#    lims(x = c(-11,51), y=c(33,71)) +
+#    scale_fill_manual(values = c("transparent", viridis::inferno(5)[4]), guide=guide_none()) + 
+#    ggtitle("b. Sensitivity analysis\ngrid-cells with soybean mean yield > 2 t ha-1 (N=1387)"),
+#  nrow=1
+#  
+#)
+#
+#ggsave(filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/Sensitivity_analyses/sensi_2_pixels.png",
+#       width = 12, height = 7, dpi=300, bg="white")
 
 # > Soybean allocations based on yields projeted from various models 
-sensi_2 <- loadRDa(paste0(path_alloc, "sensi/sensi_2_yield_2.rda"))
+load(paste0(path_alloc, "sensi/sensi_1.rda"))
+sensi_2 <- sensi_allocations ; rm(sensi_allocations)
 
 # > Allocations and area requierements
-alloc_sensi_2 <- list("Main analysis: grid-cells with soybean mean yield > 1 t ha-1 (N=2047)"        = allocations,
-                      "Sensitivity analysis: grid-cells with soybean mean yield > 2 t ha-1 (N=1387)" = sensi_2)
+alloc_sensi_2 <- list("Areas with soybean mean yield equal or higher than 1.0 t ha-1" = allocations,
+                      "Areas with soybean mean yield equal or higher than 2.8 t ha-1" = sensi_2)
 
 
 # > Shapping allocations results
@@ -1260,10 +1394,10 @@ sensi_2_data_res <- format_alloc(results_allocations =  alloc_sensi_2 %>%
                                    }, .id="sensi_set")) %>% 
   # > Set of sensitivity analyses
   mutate(sensi_set = recode(sensi_set, 
-                            "Main analysis: grid-cells with soybean mean yield > 1 t ha-1 (N=2047)"       ="Grid-cells with\nsoybean mean yield\n> 1 t ha-1\n(main analysis)",
-                            "Sensitivity analysis: grid-cells with soybean mean yield > 2 t ha-1 (N=1387)"="Grid-cells with\nsoybean mean yield\n> 2 t ha-1")) %>%
-  mutate(sensi_set = factor(sensi_set, levels=c("Grid-cells with\nsoybean mean yield\n> 1 t ha-1\n(main analysis)",
-                                                "Grid-cells with\nsoybean mean yield\n> 2 t ha-1")))
+                            "Areas with soybean mean yield equal or higher than 1.0 t ha-1"="Areas with\nsoybean mean yield\n> 1.0 t ha-1",
+                            "Areas with soybean mean yield equal or higher than 2.8 t ha-1"="Areas with\nsoybean mean yield\n> 2.8 t ha-1")) %>%
+  mutate(sensi_set = factor(sensi_set, levels=c("Areas with\nsoybean mean yield\n> 1.0 t ha-1",
+                                                "Areas with\nsoybean mean yield\n> 2.8 t ha-1")))
 
 # Surface required to cover different shares of 
 #    EU's consumption of soybean 
@@ -1275,24 +1409,24 @@ sensi_2_res1 <- format_alloc(results_allocations =  alloc_sensi_2 %>%
                                }, .id="sensi_set")) %>%
   # > Set of sensitivity analyses
   mutate(sensi_set = recode(sensi_set, 
-                            "Main analysis: grid-cells with soybean mean yield > 1 t ha-1 (N=2047)"       ="Grid-cells with\nsoybean mean yield\n> 1 t ha-1\n(main analysis)",
-                            "Sensitivity analysis: grid-cells with soybean mean yield > 2 t ha-1 (N=1387)"="Grid-cells with\nsoybean mean yield\n> 2 t ha-1")) %>%
-  mutate(sensi_set = factor(sensi_set, levels=c("Grid-cells with\nsoybean mean yield\n> 1 t ha-1\n(main analysis)",
-                                                "Grid-cells with\nsoybean mean yield\n> 2 t ha-1")))
+                            "Areas with soybean mean yield equal or higher than 1.0 t ha-1" = "Areas with\nsoybean mean yield\n> 1.0 t ha-1",
+                            "Areas with soybean mean yield equal or higher than 2.8 t ha-1" = "Areas with\nsoybean mean yield\n> 2.8 t ha-1")) %>%
+  mutate(sensi_set = factor(sensi_set, levels=c("Areas with\nsoybean mean yield\n> 1.0 t ha-1",
+                                                "Areas with\nsoybean mean yield\n> 2.8 t ha-1")))
 
 # Surface required to produce the same production (maize+soybean)
 #    as intercropping 
-sensi_1_res3 <- format_alloc(results_allocations =  alloc_sensi_2 %>% 
+sensi_2_res3 <- format_alloc(results_allocations =  alloc_sensi_2 %>% 
                                map_dfr(., ~{ 
                                  
                                  map_dfr(.x, ~{ .x$res3 }, .id="scenario")
                                  
                                }, .id="sensi_set")) %>%
   mutate(sensi_set = recode(sensi_set, 
-                            "Main analysis: grid-cells with soybean mean yield > 1 t ha-1 (N=2047)"       ="Main\nanalysis\nsoybean\nyield\n> 1 t ha-1",
-                            "Sensitivity analysis: grid-cells with soybean mean yield > 2 t ha-1 (N=1387)"="Sensitivity\nanalysis\nsoybean\nyield\n> 2 t ha-1")) %>%
-  mutate(sensi_set = factor(sensi_set, levels=c("Main\nanalysis\nsoybean\nyield\n> 1 t ha-1",
-                                                "Sensitivity\nanalysis\nsoybean\nyield\n> 2 t ha-1")))
+                            "Areas with soybean mean yield equal or higher than 1.0 t ha-1"="Areas with\nsoybean mean yield\n> 1.0 t ha-1",
+                            "Areas with soybean mean yield equal or higher than 2.8 t ha-1"="Areas with\nsoybean mean yield\n> 2.8 t ha-1")) %>%
+  mutate(sensi_set = factor(sensi_set, levels=c("Areas with\nsoybean mean yield\n> 1.0 t ha-1",
+                                                "Areas with\nsoybean mean yield\n> 2.8 t ha-1")))
 
 # > Compare with main analysis
 sensi_2_res1 %>% 
@@ -1301,12 +1435,12 @@ sensi_2_res1 %>%
   spread(key = strategy, value = surface)
 
 sensi_2_res3 %>% 
-  filter(pLER_s==0.56, pLER_m==0.79, freq_crop == 0.25, target_soybean == 33.75) %>% 
+  filter(pLER_s==0.56, pLER_m==0.79, freq_crop == 0.25, target_soybean_lab == "75%") %>% 
   dplyr::select(sensi_set, crop, strategy, total_production) %>% 
   spread(key = strategy, value = total_production)
 
 sensi_2_res3 %>% 
-  filter(pLER_s==0.56, pLER_m==0.79, freq_crop == 0.25, target_soybean == 33.75) %>% 
+  filter(pLER_s==0.56, pLER_m==0.79, freq_crop == 0.25, target_soybean_lab == "75%") %>% 
   dplyr::select(sensi_set, crop, strategy, total_surface) %>% 
   spread(key = strategy, value = total_surface)
 
@@ -1336,7 +1470,7 @@ sensi_2_res1 %>%
                 y = perc_eu_supply,
                 group=sensi_set)) +
   # current level of self-sufficiency (cake+grain)
-  geom_hline(yintercept = 42.3, color='red', lty=2) +
+  geom_hline(yintercept = 16, color='red', lty=2) +
   geom_hline(yintercept = c(25, 50, 75, 100), 
              linetype=2, 
              color = "grey90") +
@@ -1367,6 +1501,93 @@ sensi_2_res1 %>%
 # Save
 ggsave(filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/Sensitivity_analyses/sensi_2_selfsufficiency_perc.png", 
        width=14, height=6, bg="white", dpi=300)
+
+
+# Check with sensitivity analysis with intercropped soybean 
+# restricted to areas where soybean yield > mean in EU (2.8 t.ha-1)
+res2_sensi_p2 %>% 
+  # > Keep results for the plot
+  filter(target_soybean_lab == "100%",        # soybean target production = 100% consumption
+         strategy == "Intercropping", # intercropping
+         crop == "Soybean",           # soybean
+         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
+         pLER_m == 0.79               # pLER maize is set as reference value
+  ) %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(perc_eu_supply=(production/(target_soybean*10^6))*100,
+         perc_eu_supply=if_else(perc_eu_supply>100, 100, perc_eu_supply), 
+         surface = surface/10^6,
+         production=production/10^6) %>%
+  dplyr::select(freq_crop_lab, pLER_s, surface, production, perc_eu_supply) %>%
+  gather(key=var, value=val, -freq_crop_lab, -pLER_s) %>%
+  mutate(val=round(val,1)) %>%
+  spread(key=freq_crop_lab, value=val) %>%
+  arrange(var, pLER_s)
+
+#    pLER_s            var 1 year in 4
+# 1   0.56 perc_eu_supply        15.0
+# 2   0.56     production         5.4
+# 3   0.56        surface         3.1
+
+res2_sensi_p2 %>% 
+  # > Keep results for the plot
+  filter(target_soybean == 36.3,        # soybean target production = 100% consumption
+         strategy == "Intercropping", # intercropping
+         crop == "Soybean",           # soybean
+         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
+         pLER_m == 0.79               # pLER maize is set as reference value
+  ) %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(perc_eu_supply=(production/(36.3*10^6))*100) %>%
+  # > Reference values as reference for the dotted lines
+  mutate(pLER_lab = case_when(
+    pLER_lab == "References values for pLERs"~0, 
+    TRUE~1)) %>% 
+  # > Plot
+  ggplot(., aes(x = freq_crop_lab, 
+                y = perc_eu_supply,
+                group=pLER_s)) +
+  geom_hline(yintercept = c(25, 50, 75, 100), 
+             linetype=1, 
+             color = "grey90") +
+  geom_line(aes(color=as.factor(pLER_s)),
+            linewidth=1.2) +
+  geom_line(aes(alpha=as.factor(pLER_lab)), 
+            linewidth=1, color="white", linetype=3) +
+  geom_point(aes(color=as.factor(pLER_s), shape=as.factor(pLER_s)), 
+             size=3) +
+  # current level of self-sufficiency (cake+grain)
+  geom_hline(yintercept = 16, color='black', lty=2) +
+  annotate("text", x = 6.75, y = 16, hjust=0, 
+           label = "Current\nself-sufficiency\nrate in\nthe EU: 16%", 
+           color="black", fontface = 'italic') +
+  scale_color_manual(values = c(viridis::viridis(6)[4:6], 
+                                viridis::inferno(direction = -1, 6)[2:4])) +
+  scale_alpha_manual(values = c(0,1), guide=guide_none()) +
+  scale_y_continuous(breaks = c(25,50,75,100)) +
+  guides(color = guide_legend(title = "Partial land equivalent ratio for soybean", reverse = T, nrow=2),
+         shape = guide_legend(title = "Partial land equivalent ratio for soybean", reverse = T, nrow=2)) +
+  theme_cowplot() +
+  theme(strip.text.y = element_text(angle=0, size=11),
+        strip.text.x = element_text(size=11),
+        axis.text = element_text(size=11),
+        axis.title = element_text(size=11),
+        panel.border = element_rect(color="black"),
+        legend.position = "bottom",
+        legend.title = element_text(size=11),
+        legend.text = element_text(size=10),
+        legend.background = element_rect(fill="white"),
+        plot.margin = unit(c(1,4,1,1), "cm")
+  ) +
+  #lims(y=c(0,101)) +
+  coord_cartesian(clip = "off", xlim=c(1,6)) +
+  labs(x = "\nReturn frequency", y = "Soybean self-sufficiency level (%)\n")
+
+# Save
+ggsave(filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2_mean_yield.png", 
+       width=22, height=18, bg="white", units = "cm", dpi=300)
+
+
 
 # > Maps of allocation 
 sensi_2_data_res %>% 
@@ -1418,14 +1639,16 @@ sensi_2_data_res %>%
               "a. Crop allocation")
     
     # > Save
-    ggsave(plot_i,
-           filename = paste0("E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/Sensitivity_analyses/sensi_2_map", gsub("%", "", unique(.x$target_soybean_lab)), ".png"), 
-           width=9, height=8, bg="white", dpi=300)
+    #ggsave(plot_i,
+    #       filename = paste0("E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/Sensitivity_analyses/sensi_2_map", gsub("%", "", unique(.x$target_soybean_lab)), ".png"), 
+    #       width=9, height=8, bg="white", dpi=300)
+    
+    plot_i
     
   })
 
 # > Barplots - area requirements and co-production of maize and soybean in each strategy
-sensi_2_res1 %>%
+p_sensi_2_1 <- sensi_2_res1 %>%
   filter(pLER_s == 0.56,
          pLER_m == 0.79, 
          freq_crop == 0.25)  %>% 
@@ -1503,17 +1726,18 @@ sensi_2_res1 %>%
     
     p <- plot_grid(surf_barplots_i + 
                      theme(legend.position = "none") +
-                     ggtitle(label="", subtitle = "b. Area"),  
+                     ggtitle(label=paste0(unique(.x$target_soybean_lab)), subtitle = "b. Area"),  
                    prod_barplot_i + 
                      ggtitle(label = "", subtitle = "c. Production"),  
                    nrow=2, align="hv", axis = "btrl")
     
-    ggsave(p, 
-           filename = paste0("E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/Sensitivity_analyses/sensi_2_barplots_", gsub("%", "", unique(.x$target_soybean_lab)), ".png"), 
-           width=6, height=8, bg="white", dpi=300)
-    
+    #ggsave(p, 
+    #       filename = paste0("E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/Sensitivity_analyses/sensi_2_barplots_", gsub("%", "", unique(.x$target_soybean_lab)), ".png"), 
+    #       width=6, height=8, bg="white", dpi=300)
+    p
   })
 
+p_sensi_2_1[[3]]
 
 # -------------------------
 # > sensitivity analysis including countries outside of EU
