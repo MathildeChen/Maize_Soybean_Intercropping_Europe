@@ -396,6 +396,83 @@ tab_p2 <- res2 %>%
 
 save(tab_p2, file = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.rda")
 
+# Try with another type of presentation
+# PC
+load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/sensi/sensi_4_res1.rda")
+# CIRAD
+#load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/sensi/sensi_4.rda")
+
+sensi_4_res1%>% 
+  # > Keep results for the plot
+  filter(target_soybean == 36.3,        # soybean target production = 100% consumption
+         strategy == "Intercropping", # intercropping
+         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
+         pLER_m %in% c(0.5, 0.6, 0.7, 0.79, 0.8, 0.9)
+  ) %>%
+  mutate(pLER=if_else(crop=="Soybean", pLER_s, pLER_m)) %>% 
+  mutate(keep=case_when(crop=="Soybean" & pLER_m==0.79~1,
+                        crop=="Maize"&pLER_s==0.56~1,
+                        TRUE~0)) %>%
+  filter(keep==1) %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(target_soybean = if_else(crop=="Soybean", target_soybean, 85.1), 
+         perc_eu_supply=(production/(target_soybean*10^6))*100) %>% 
+  mutate(crop=recode(crop,"Soybean"="a. Soybean", "Maize"="b. Maize")) %>% 
+  mutate(freq_crop_lab=recode(freq_crop_lab, 
+                              "1 year in 7"="one-in-seven",
+                              "1 year in 6"="one-in-six",
+                              "1 year in 5"="one-in-five",
+                              "1 year in 4"="one-in-four",
+                              "1 year in 2"="one-in-three",
+                              "1 year in 3"="one-in-two")) %>%
+  # > Reference values as reference for the dotted lines
+  mutate(pLER_lab = case_when(
+    pLER_lab == "0.56 - 0.79"~1, 
+    TRUE~0)) %>%
+  # > Plot
+  ggplot(., aes(x = freq_crop_lab, 
+                y = perc_eu_supply)) +
+  # current level of self-sufficiency 
+  geom_hline(aes(yintercept = target_soybean), color='black', lty=2, linewidth=1) +
+  # refs
+  geom_hline(yintercept = c(25,50,75,100,125,150), 
+             linetype=2, 
+             color = "grey90") +
+  geom_path(aes(color=as.factor(pLER), group=interaction(crop,pLER)), 
+            linewidth=1) +
+  geom_point(aes(color=as.factor(pLER), shape=as.factor(pLER_lab)),
+             size=2) +
+  scale_color_manual(values = c(viridis::viridis(6), 
+                                viridis::inferno(direction = -1, 7)[2:7])) +
+  scale_shape_manual(values=c(3,15)) +
+  scale_y_continuous(breaks = c(25,50,75,100,125,150)) +
+  guides(color = guide_legend(title = "Partial land equivalent ratio (pLER):", nrow=1),
+         shape = guide_none()) +
+  theme_cowplot() +
+  theme(strip.text.y = element_text(angle=0, size=11),
+        strip.text.x = element_text(size=11, face = "bold", hjust = 0),
+        strip.background = element_blank(),
+        axis.text.x = element_text(size=10, angle=45, 
+                                   vjust = 0.85, hjust = 0.9),
+        axis.text.y = element_text(size=10),
+        axis.title = element_text(size=11),
+        panel.border = element_rect(color="black", linewidth = 0.1),
+        axis.line = element_line(color="black", linewidth = 0.1),
+        #legend.position = c(-0.0,.8),
+        legend.position = "bottom",
+        legend.title = element_text(size=11),
+        legend.title.position = "top",
+        legend.text = element_text(size=10),
+        legend.background = element_rect(fill="white")#,plot.margin = unit(c(0,3,0,0), "cm")
+  ) +
+  #lims(y=c(0,101)) +
+  facet_grid(.~crop) +
+  coord_cartesian(clip = "off") +
+  labs(x = "\nReturn frequency", y = "Self-sufficiency level (%)\n")
+
+ggsave(filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2_maize.png", 
+       width=22, height=18, bg="white", units = "cm", dpi=300)
+
 
 # -------------------------
 # Figure 3 - Area requirements to reach the same production
