@@ -171,7 +171,7 @@ mean_Ya_pred_eu <- Ya_pred_eu %>%
   # > long format 
   gather(key=year, value=Ya_pred, starts_with("X2")) %>% 
   # > for each pixel, recompute yields (in t/ha)
-  group_by(crop, x, y) %>% 
+  group_by(crop, x, y, cropland_area_ha) %>% 
   mutate(Ya_pred_t_ha = Ya_pred/cropland_area_ha) %>%
   summarise(mean_Ya_pred = mean(Ya_pred, na.rm=T)) %>%
   mutate(mean_Ya_pred = ifelse(is.na(mean_Ya_pred)==T, 0, mean_Ya_pred))
@@ -305,177 +305,8 @@ mean_Ya_pred_eu_cat %>%
 # 2 mean_Ya_soybean_cat_2                80.8                56.1                25.6
 # 3 mean_Ya_soybean_cat_3                36.2                24.1                17.2
 
-# --------------------------
-# Figure 2. Maximum levels of soybean self-sufficiency reached with intercropping 
-# according to varying values of pLER of soybean and crop return frequency
-
-# > is it possible to cover EU27 soybean 
-# consumption using intercropping?
-
-p2 <- res2 %>% 
-  # > Keep results for the plot
-  filter(target_soybean == 36.3,        # soybean target production = 100% consumption
-         strategy == "Intercropping", # intercropping
-         crop == "Soybean",           # soybean
-         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
-         pLER_m == 0.79               # pLER maize is set as reference value
-  ) %>%
-  # > Self-sufficiency coverage for each scenario 
-  mutate(perc_eu_supply=(production/(36.3*10^6))*100) %>%
-  # > Reference values as reference for the dotted lines
-  mutate(pLER_lab = case_when(
-    pLER_lab == "References values for pLERs"~0, 
-    TRUE~1)) %>% 
-  # > Plot
-  ggplot(., aes(x = freq_crop_lab, 
-                y = perc_eu_supply,
-                group=pLER_s)) +
-  geom_hline(yintercept = c(25, 50, 75, 100), 
-             linetype=2, 
-             color = "grey90") +
-  geom_line(aes(color=as.factor(pLER_s)),
-            linewidth=1.2) +
-  geom_line(aes(alpha=as.factor(pLER_lab)), 
-            linewidth=1, color="white", linetype=3) +
-  geom_point(aes(color=as.factor(pLER_s), shape=as.factor(pLER_s)), 
-             size=3) +
-  # current level of self-sufficiency (cake+grain)
-  geom_hline(yintercept = 16, color='black', lty=2) +
-  annotate("text", x = 0.5, y = 11.5, hjust=0, 
-           label = "Current level of soybean (cake + grains)\nself-sufficiency in the EU: 7.4%", 
-           color="black", fontface = 'italic') +
-  scale_color_manual(values = c(viridis::viridis(6)[4:6], 
-                                viridis::inferno(direction = -1, 6)[2:4])) +
-  scale_alpha_manual(values = c(0,1), guide=guide_none()) +
-  scale_y_continuous(breaks = c(25,50,75,100)) +
-  guides(color = guide_legend(title = "Partial land equivalent ratio for soybean", reverse = T, nrow=1),
-         shape = guide_legend(title = "Partial land equivalent ratio for soybean", reverse = T, nrow=1)) +
-  theme_cowplot() +
-  theme(strip.text.y = element_text(angle=0, size=11),
-        strip.text.x = element_text(size=11),
-        axis.text = element_text(size=11),
-        axis.title = element_text(size=11),
-        #legend.position = c(-0.0,.8),
-        legend.position = "bottom",
-        legend.title = element_text(size=11),
-        legend.text = element_text(size=10),
-        legend.background = element_rect(fill="white")#,plot.margin = unit(c(0,3,0,0), "cm")
-        ) +
-  #lims(y=c(0,101)) +
-  coord_cartesian(clip = "off") +
-  labs(x = "\nReturn frequency", y = "Soybean self-sufficiency level (%)\n") ; p2
-
-# Save
-ggsave(p2, 
-       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.png", 
-       width=22, height=18, bg="white", units = "cm", dpi=300)
-
-ggsave(p2, 
-       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.pdf", 
-       width=22, height=18, bg="white", units = "cm", dpi=300)
-
-# Associated table
-tab_p2 <- res2 %>% 
-  # > Keep results for the plot
-  filter(target_soybean_lab == "100%",        # soybean target production = 100% consumption
-         strategy == "Intercropping", # intercropping
-         crop == "Soybean",           # soybean
-         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
-         pLER_m == 0.79               # pLER maize is set as reference value
-  ) %>%
-  # > Self-sufficiency coverage for each scenario 
-  mutate(perc_eu_supply=(production/(target_soybean*10^6))*100,
-         perc_eu_supply=if_else(perc_eu_supply>100, 100, perc_eu_supply), 
-         surface = surface/10^6,
-         production=production/10^6) %>%
-  dplyr::select(freq_crop_lab, pLER_s, surface, production, perc_eu_supply) %>%
-  gather(key=var, value=val, -freq_crop_lab, -pLER_s) %>%
-  mutate(val=round(val,1)) %>%
-  spread(key=freq_crop_lab, value=val) %>%
-  arrange(var, pLER_s)
-
-save(tab_p2, file = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.rda")
-
-# Try with another type of presentation
-# PC
-load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/sensi/sensi_4_res1.rda")
-# CIRAD
-#load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/sensi/sensi_4.rda")
-
-sensi_4_res1%>% 
-  # > Keep results for the plot
-  filter(target_soybean == 36.3,        # soybean target production = 100% consumption
-         strategy == "Intercropping", # intercropping
-         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
-         pLER_m %in% c(0.5, 0.6, 0.7, 0.79, 0.8, 0.9)
-  ) %>%
-  mutate(pLER=if_else(crop=="Soybean", pLER_s, pLER_m)) %>% 
-  mutate(keep=case_when(crop=="Soybean" & pLER_m==0.79~1,
-                        crop=="Maize"&pLER_s==0.56~1,
-                        TRUE~0)) %>%
-  filter(keep==1) %>%
-  # > Self-sufficiency coverage for each scenario 
-  mutate(target_soybean = if_else(crop=="Soybean", target_soybean, 85.1), 
-         perc_eu_supply=(production/(target_soybean*10^6))*100) %>% 
-  mutate(crop=recode(crop,"Soybean"="a. Soybean", "Maize"="b. Maize")) %>% 
-  mutate(freq_crop_lab=recode(freq_crop_lab, 
-                              "1 year in 7"="one-in-seven",
-                              "1 year in 6"="one-in-six",
-                              "1 year in 5"="one-in-five",
-                              "1 year in 4"="one-in-four",
-                              "1 year in 2"="one-in-three",
-                              "1 year in 3"="one-in-two")) %>%
-  # > Reference values as reference for the dotted lines
-  mutate(pLER_lab = case_when(
-    pLER_lab == "0.56 - 0.79"~1, 
-    TRUE~0)) %>%
-  # > Plot
-  ggplot(., aes(x = freq_crop_lab, 
-                y = perc_eu_supply)) +
-  # current level of self-sufficiency 
-  geom_hline(aes(yintercept = target_soybean), color='black', lty=2, linewidth=1) +
-  # refs
-  geom_hline(yintercept = c(25,50,75,100,125,150), 
-             linetype=2, 
-             color = "grey90") +
-  geom_path(aes(color=as.factor(pLER), group=interaction(crop,pLER)), 
-            linewidth=1) +
-  geom_point(aes(color=as.factor(pLER), shape=as.factor(pLER_lab)),
-             size=2) +
-  scale_color_manual(values = c(viridis::viridis(6), 
-                                viridis::inferno(direction = -1, 7)[2:7])) +
-  scale_shape_manual(values=c(3,15)) +
-  scale_y_continuous(breaks = c(25,50,75,100,125,150)) +
-  guides(color = guide_legend(title = "Partial land equivalent ratio (pLER):", nrow=1),
-         shape = guide_none()) +
-  theme_cowplot() +
-  theme(strip.text.y = element_text(angle=0, size=11),
-        strip.text.x = element_text(size=11, face = "bold", hjust = 0),
-        strip.background = element_blank(),
-        axis.text.x = element_text(size=10, angle=45, 
-                                   vjust = 0.85, hjust = 0.9),
-        axis.text.y = element_text(size=10),
-        axis.title = element_text(size=11),
-        panel.border = element_rect(color="black", linewidth = 0.1),
-        axis.line = element_line(color="black", linewidth = 0.1),
-        #legend.position = c(-0.0,.8),
-        legend.position = "bottom",
-        legend.title = element_text(size=11),
-        legend.title.position = "top",
-        legend.text = element_text(size=10),
-        legend.background = element_rect(fill="white")#,plot.margin = unit(c(0,3,0,0), "cm")
-  ) +
-  #lims(y=c(0,101)) +
-  facet_grid(.~crop) +
-  coord_cartesian(clip = "off") +
-  labs(x = "\nReturn frequency", y = "Self-sufficiency level (%)\n")
-
-ggsave(filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2_maize.png", 
-       width=22, height=18, bg="white", units = "cm", dpi=300)
-
-
 # -------------------------
-# Figure 3 - Area requirements to reach the same production
+# Figure 2 - Area requirements to reach the same production
 # of maize and soybean in intercropping and sole cropping
 
 # > Max surface = 1/4 of EU27 cropland ~ 25 Mha
@@ -844,7 +675,457 @@ tab_p4 <- res3 %>%
 
 save(tab_p4, file="E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/04_landsaving_v2.rda")
 
-# ------------------------------------------------------#
+# --------------------------
+# Figure 3. Maximum levels of soybean self-sufficiency reached with intercropping 
+# according to varying values of pLER of soybean and crop return frequency
+
+# > is it possible to cover EU27 soybean 
+# consumption using intercropping?
+
+p2 <- res2 %>% 
+  # > Keep results for the plot
+  filter(target_soybean == 36.3,        # soybean target production = 100% consumption
+         strategy == "Intercropping", # intercropping
+         crop == "Soybean",           # soybean
+         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
+         pLER_m == 0.79               # pLER maize is set as reference value
+  ) %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(perc_eu_supply=(production/(36.3*10^6))*100) %>%
+  # > Reference values as reference for the dotted lines
+  mutate(pLER_lab = case_when(
+    pLER_lab == "References values for pLERs"~0, 
+    TRUE~1)) %>% 
+  # > Plot
+  ggplot(., aes(x = freq_crop_lab, 
+                y = perc_eu_supply,
+                group=pLER_s)) +
+  geom_hline(yintercept = c(25, 50, 75, 100), 
+             linetype=2, 
+             color = "grey90") +
+  geom_line(aes(color=as.factor(pLER_s)),
+            linewidth=1.2) +
+  geom_line(aes(alpha=as.factor(pLER_lab)), 
+            linewidth=1, color="white", linetype=3) +
+  geom_point(aes(color=as.factor(pLER_s), shape=as.factor(pLER_s)), 
+             size=3) +
+  # current level of self-sufficiency (cake+grain)
+  geom_hline(yintercept = 16, color='black', lty=2) +
+  annotate("text", x = 0.5, y = 11.5, hjust=0, 
+           label = "Current level of soybean (cake + grains)\nself-sufficiency in the EU: 7.4%", 
+           color="black", fontface = 'italic') +
+  scale_color_manual(values = c(viridis::viridis(6)[4:6], 
+                                viridis::inferno(direction = -1, 6)[2:4])) +
+  scale_alpha_manual(values = c(0,1), guide=guide_none()) +
+  scale_y_continuous(breaks = c(25,50,75,100)) +
+  guides(color = guide_legend(title = "Partial land equivalent ratio for soybean", reverse = T, nrow=1),
+         shape = guide_legend(title = "Partial land equivalent ratio for soybean", reverse = T, nrow=1)) +
+  theme_cowplot() +
+  theme(strip.text.y = element_text(angle=0, size=11),
+        strip.text.x = element_text(size=11),
+        axis.text = element_text(size=11),
+        axis.title = element_text(size=11),
+        #legend.position = c(-0.0,.8),
+        legend.position = "bottom",
+        legend.title = element_text(size=11),
+        legend.text = element_text(size=10),
+        legend.background = element_rect(fill="white")#,plot.margin = unit(c(0,3,0,0), "cm")
+  ) +
+  #lims(y=c(0,101)) +
+  coord_cartesian(clip = "off") +
+  labs(x = "\nReturn frequency", y = "Soybean self-sufficiency level (%)\n") ; p2
+
+# Save
+ggsave(p2, 
+       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.png", 
+       width=22, height=18, bg="white", units = "cm", dpi=300)
+
+ggsave(p2, 
+       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.pdf", 
+       width=22, height=18, bg="white", units = "cm", dpi=300)
+
+# Associated table
+tab_p2 <- res2 %>% 
+  # > Keep results for the plot
+  filter(target_soybean_lab == "100%",        # soybean target production = 100% consumption
+         strategy == "Intercropping", # intercropping
+         crop == "Soybean",           # soybean
+         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
+         pLER_m == 0.79               # pLER maize is set as reference value
+  ) %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(perc_eu_supply=(production/(target_soybean*10^6))*100,
+         perc_eu_supply=if_else(perc_eu_supply>100, 100, perc_eu_supply), 
+         surface = surface/10^6,
+         production=production/10^6) %>%
+  dplyr::select(freq_crop_lab, pLER_s, surface, production, perc_eu_supply) %>%
+  gather(key=var, value=val, -freq_crop_lab, -pLER_s) %>%
+  mutate(val=round(val,1)) %>%
+  spread(key=freq_crop_lab, value=val) %>%
+  arrange(var, pLER_s)
+
+save(tab_p2, file = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.rda")
+
+# Try with another type of presentation
+# PC
+#load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/sensi/sensi_4_res1.rda")
+# CIRAD
+load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/sensi/sensi_4_res1.rda")
+
+tab_p <- sensi_4_res1%>% 
+  # > Keep results for the plot
+  filter(target_soybean == 36.3,        # soybean target production = 100% consumption
+         strategy == "Intercropping", # intercropping
+         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
+         pLER_m %in% c(0.5, 0.6, 0.7, 0.79, 0.8, 0.9)
+  ) %>%
+  mutate(pLER=if_else(crop=="Soybean", pLER_s, pLER_m)) %>% 
+  mutate(keep=case_when(crop=="Soybean" & pLER_m==0.79~1,
+                        crop=="Maize"&pLER_s==0.56~1,
+                        TRUE~0)) %>%
+  filter(keep==1) %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(target_soybean = if_else(crop=="Soybean", target_soybean, 85.1), 
+         perc_eu_supply=(production/(target_soybean*10^6))*100) %>% 
+  mutate(crop=recode(crop,"Soybean"="a. Soybean", "Maize"="b. Maize")) %>% 
+  mutate(freq_crop_lab=recode(freq_crop_lab, 
+                              "1 year in 7"="one-in-seven",
+                              "1 year in 6"="one-in-six",
+                              "1 year in 5"="one-in-five",
+                              "1 year in 4"="one-in-four",
+                              "1 year in 2"="one-in-three",
+                              "1 year in 3"="one-in-two")) %>%
+  # > Reference values as reference for the dotted lines
+  mutate(pLER_lab = case_when(
+    pLER_lab == "0.56 - 0.79"~1, 
+    TRUE~0))
+
+# > Plot
+plot_grid(
+  # > a. Soybean
+  ggplot(tab_p[which(tab_p$crop=="a. Soybean"),], aes(x = freq_crop_lab, y = perc_eu_supply)) +
+    # refs
+    geom_hline(yintercept = c(25,50,75,100,125,150), linetype=2, color = "grey90") +
+    geom_path(aes(color=as.factor(pLER), group=interaction(crop,pLER)), 
+              linewidth=1) +
+    geom_point(aes(color=as.factor(pLER), shape=as.factor(pLER_lab)),
+               size=2) +
+    # current level of self-sufficiency 
+    geom_hline(yintercept = 16, color='black', lty=2, linewidth=0.5) +
+    annotate("text", x = 6, y = 11.5, hjust=1, 
+             label = "Current level in the EU: 16%", 
+             color="black", fontface = 'italic') +
+    scale_color_manual(values = viridis::rocket(7, direction = -1)[2:7]) +
+    scale_shape_manual(values=c(3,15)) +
+    scale_y_continuous(breaks = c(25,50,75,100,125,150), limits = c(10,166)) +
+    guides(color = guide_legend(title = "\nPartial land equivalent ratio for soybean:", ncol=3),
+           shape = guide_none()) +
+    facet_wrap(.~crop)+
+    theme_cowplot() +
+    theme(strip.text.y.left = element_text(angle=0, size=13, face = "bold"),
+          strip.text.x = element_text(size=13, face = "bold", hjust = 0),
+          strip.background = element_blank(),
+          axis.text.x = element_text(size=12, angle=45, 
+                                     vjust = 0.85, hjust = 0.9),
+          axis.text.y = element_text(size=12),
+          axis.title = element_text(size=12),
+          axis.line = element_line(color="black", linewidth = 0.1),
+          panel.border = element_rect(color="black"),
+          plot.caption = element_text(hjust = 0),
+          #legend.position = c(-0.0,.8),
+          legend.position = "bottom",
+          legend.title = element_text(size=12),
+          legend.title.position = "top",
+          legend.text = element_text(size=10),
+          legend.background = element_rect(fill="white")#,plot.margin = unit(c(0,3,0,0), "cm")
+    ) +
+    labs(x = "\nReturn frequency", y = "Self-sufficiency level (%)\n", 
+         caption = "Note: partial land equivalent ratio\nfor maize fixed at 0.79"),
+  
+  # > b. Maize
+  ggplot(tab_p[which(tab_p$crop!="a. Soybean"),], aes(x = freq_crop_lab, y = perc_eu_supply)) +
+    # refs
+    geom_hline(yintercept = c(25,50,75,100,125,150), 
+               linetype=2, 
+               color = "grey90") +
+    geom_path(aes(color=as.factor(pLER), group=interaction(crop,pLER)), 
+              linewidth=1) +
+    geom_point(aes(color=as.factor(pLER), shape=as.factor(pLER_lab)),
+               size=2) +
+    # current level of self-sufficiency 
+    geom_hline(yintercept = 81, color='black', lty=2, linewidth=0.5) +
+    annotate("text", x = 6, y = 69.5, hjust=1, 
+             label = "Current level\n in the EU: 81%", 
+             color="black", fontface = 'italic') +
+    scale_color_manual(values = viridis::mako(7, direction = -1)[2:7]) +
+    scale_shape_manual(values=c(3,15)) +
+    scale_y_continuous(breaks = c(25,50,75,100,125,150), limits = c(10,166)) +
+    guides(color = guide_legend(title = "\nPartial land equivalent ratio for maize:", ncol=3),
+           shape = guide_none()) +
+    facet_wrap(.~crop)+
+    theme_cowplot() +
+    theme(strip.text.y.left = element_text(angle=0, size=13, face = "bold"),
+          strip.text.x = element_text(size=13, face = "bold", hjust = 0),
+          strip.background = element_blank(),
+          axis.text.x = element_text(size=12, angle=45, 
+                                     vjust = 0.85, hjust = 0.9),
+          axis.text.y = element_blank(),
+          axis.title.x = element_text(size=12),
+          axis.title.y = element_blank(),
+          axis.line = element_line(color="black", linewidth = 0.1),
+          panel.border = element_rect(color="black"),
+          plot.caption = element_text(hjust = 0),
+          #legend.position = c(-0.0,.8),
+          legend.position = "bottom",
+          legend.title = element_text(size=12),
+          legend.title.position = "top",
+          legend.text = element_text(size=10),
+          legend.background = element_rect(fill="white")#,plot.margin = unit(c(0,3,0,0), "cm")
+    ) +
+    labs(x = "\nReturn frequency", y = "Self-sufficiency level (%)\n", 
+         caption = "Note: partial land equivalent ratio\nfor soybean fixed at 0.56"),
+  nrow=1, rel_widths = c(0.55, 0.45)
+)
+
+
+ggsave(filename = "D:/Mes Donnees/POSTDOC INRAE/PAPERS/02_PNAS/02_Figures/02_selfsufficiency_perc_v2_maize.png",
+       #filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2_maize.png", 
+       width=22, height=18, bg="white", units = "cm", dpi=300)
+
+# --------------------------
+# Figure 4. Results' sensitivity according pLERs and frequency in crop sequences
+
+# PC
+#load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/sensi/sensi_4_res2.rda")
+# CIRAD
+load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/sensi/sensi_4_res2.rda")
+
+# > Heatmap
+summary(sensi_4_res2$Ratio_2)
+#    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+# 0.7603  1.0415  1.1586  1.1585  1.2749  1.5834    1681  
+
+limits.min.plots <- 0.7
+limits.max.plots <- 1.6
+midpoint <- 1
+
+
+# V1
+
+sensi_4_res2_p <- sensi_4_res2 %>%
+  filter(#freq_crop_lab == '1 year in 4', 
+         target_soybean_lab=="50%") %>% 
+  mutate(freq_crop_lab=recode(freq_crop_lab, 
+                              "1 year in 7"="One-in-seven years",
+                              "1 year in 6"="One-in-six year",
+                              "1 year in 5"="One-in-five years",
+                              "1 year in 4"="One-in-four years",
+                              "1 year in 2"="One-in-three years",
+                              "1 year in 3"="One-in-two years")) %>%
+  dplyr::select(-Ratio_1) %>% 
+  gather(key=indic_perf, value=value, Teta_1, Teta_2, Ratio_2)
+
+# > One-in-four years with soybean/maize
+plot_grid(
+  
+  plot_grid(
+    ggplot(data=sensi_4_res2_p[which(sensi_4_res2_p$indic_perf=="Teta_1"),] %>% 
+             filter(freq_crop_lab=="One-in-four years") %>% 
+             mutate(id_shape = if_else(pLER_s==0.56, 1, 0)), 
+           aes(x=pLER_s, y = value)) + 
+      # Teta=1 means that yields are homogenous
+      geom_hline(yintercept=1, color="black", lty=2) +
+      geom_point(aes(alpha=id_shape), shape=15) +
+      geom_path() +
+      theme_cowplot() + 
+      #facet_grid(.~freq_crop_lab) +
+      theme(strip.text.x = element_text(size=11),
+            strip.background = element_blank(),
+            strip.placement  = "outside",
+            plot.title = element_text(size=11),
+            #plot.margin = unit(c(0, 0,0,0), "cm"),
+            panel.border = element_rect(color="black"),
+            axis.text = element_text(size=11),
+            axis.title = element_text(size=11),
+            legend.position = "none",
+            legend.title = element_text(size=11),
+            legend.text = element_text(size=10)) +
+      scale_alpha_continuous(range = c(0,1)) +
+      labs(y = "Ratio between mean yields\nin sole crop and intercrop areas",  
+           x = "Partial land equivalent\nratio for soybean") +
+      scale_y_continuous(breaks = seq(1,1.1,length=5), limits = c(0.99,1.1)) +
+      ggtitle("a. "),
+    
+    ggplot(data=sensi_4_res2_p[which(sensi_4_res2_p$indic_perf=="Teta_2"),] %>% 
+             filter(freq_crop_lab=="One-in-four years") %>% 
+             mutate(id_shape1 = if_else(is.na(value), 1, 0),
+                    id_shape2 = if_else(pLER_s==0.56, 1, 0)), 
+           aes(x=pLER_s, y = value)) + 
+      # Teta=2 means that yields are homogenous
+      geom_hline(yintercept=1, color="black", lty=2) +
+      geom_point(aes(shape=as.factor(id_shape1),alpha=id_shape2)) +
+      geom_path() +
+      theme_cowplot() + 
+      #facet_grid(.~freq_crop_lab) +
+      theme(strip.text.x = element_text(size=11),
+            strip.background = element_blank(),
+            strip.placement  = "outside",
+            plot.title = element_text(size=11),
+            #plot.margin = unit(c(0, 0,0,0), "cm"),
+            panel.border = element_rect(color="black"),
+            axis.text = element_text(size=11),
+            axis.title = element_text(size=11),
+            legend.position = "none",
+            legend.title = element_text(size=11),
+            legend.text = element_text(size=10)) +
+      scale_alpha_continuous(range = c(0,1)) +
+      scale_shape_manual(values=c(15,15)) +
+      labs(y = "Ratio between mean yields\nin sole crop and intercrop areas", 
+           x = "Partial land equivalent\nratio for soybean") +
+      scale_y_continuous(breaks = seq(1,1.1,length=5), limits = c(0.99,1.1)) +
+      ggtitle("b. "),
+    
+    nrow=1, align="hv", axis="tbrl" 
+    
+  ),
+  
+  plot_grid(
+    ggplot(data=sensi_4_res2_p[which(sensi_4_res2_p$indic_perf=="Ratio_2"),] %>%
+             filter(freq_crop_lab=="One-in-four years")) + 
+      geom_raster(aes(x=pLER_s, y=pLER_m, fill=value)) + 
+      geom_point(x = 0.56, y = 0.79, pch = 15, size=2, color="white") + 
+      geom_linerange(x=0.56, ymin=0, ymax=0.79, linetype=2, color="white") + 
+      geom_linerange(xmin=0, xmax=0.56, y=0.79, linetype=2, color="white") + 
+      theme_cowplot() + 
+      theme(strip.text.x = element_text(size=11),
+            strip.background = element_blank(),
+            strip.placement  = "outside",
+            axis.text = element_text(size=11),
+            axis.title = element_text(size=11),
+            plot.title = element_text(size=11),
+            #plot.margin = unit(c(0, 0,0,0), "cm"),
+            panel.border = element_rect(color="black"),
+            legend.position = "bottom",
+            legend.title = element_text(size=11),
+            legend.text = element_text(size=10)) +
+      #facet_wrap(.~freq_crop_lab, nrow=1) + 
+      labs(x = "Partial land equivalent\nratio for soybean", 
+           y = "Partial land equivalent ratio\nfor maize", 
+           fill = "Maize ratio production in\nintercropping vs sole cropping area") + 
+      scale_fill_gradientn(
+        colours = rev(c(viridis::mako(30), "white", viridis::rocket(30, direction = -1))),
+        values = c(0, (midpoint - limits.min.plots)/(limits.max.plots - limits.min.plots), 1), 
+        limits = c(limits.min.plots, limits.max.plots),
+        breaks = c(seq(limits.min.plots, limits.max.plots, by = 0.1)),
+        na.value = "white", guide = guide_colorbar(barheight = 0.5, barwidth = 15, title.position = "top")) +
+      ggtitle("c. "),
+    
+    ggplot()+theme_void(),
+    
+    nrow=1
+  ),
+  
+  ncol=1, align="hv", axis="tbrl", rel_heights = c(0.42, 0.58)
+  
+)
+
+ggsave(filename = "D:/Mes Donnees/POSTDOC INRAE/PAPERS/02_PNAS/02_Figures/04_sensi_4_heat_map_50ss_small.png",
+       #filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2_maize.png", 
+       width=22, height=18, bg="white", units = "cm", dpi=300)
+
+
+# Full (supplement)
+plot_grid(
+  
+  ggplot(data=sensi_4_res2_p[which(sensi_4_res2_p$indic_perf=="Teta_1"),] %>% 
+           mutate(id_shape = if_else(pLER_s==0.56, 1, 0)), 
+         aes(x=pLER_s, y = value)) + 
+    # Teta=1 means that yields are homogenous
+    geom_hline(yintercept=1, color="black", lty=2) +
+    geom_point(aes(alpha=id_shape), shape=15) +
+    geom_path() +
+    theme_cowplot() + 
+    facet_grid(.~freq_crop_lab) +
+    theme(strip.text.x = element_text(size=11),
+          strip.background = element_blank(),
+          strip.placement  = "outside",
+          plot.title = element_text(size=11),
+          panel.border = element_rect(color="black"),
+          axis.text = element_text(size=11),
+          axis.title = element_text(size=11),
+          legend.position = "none",
+          legend.title = element_text(size=11),
+          legend.text = element_text(size=10)) +
+    scale_alpha_continuous(range = c(0,1)) +
+    labs(y = "Ratio between mean yields\nin sole crop and intercrop areas", 
+         x = "Partial land equivalent ratio for soybean") +
+    scale_y_continuous(breaks = seq(1,1.1,length=5), limits = c(0.99,1.1)) +
+    ggtitle("a. Soybean yields homogeneity in intercropping area vs sole cropping area"),
+  
+  ggplot(data=sensi_4_res2_p[which(sensi_4_res2_p$indic_perf=="Teta_2"),] %>% 
+    mutate(id_shape1 = if_else(is.na(value), 1, 0),
+           id_shape2 = if_else(pLER_s==0.56, 1, 0)), 
+  aes(x=pLER_s, y = value)) + 
+  # Teta=2 means that yields are homogenous
+  geom_hline(yintercept=1, color="black", lty=2) +
+    geom_point(aes(shape=as.factor(id_shape1),alpha=id_shape2)) +
+    geom_path() +
+  theme_cowplot() + 
+  facet_grid(.~freq_crop_lab) +
+  theme(strip.text.x = element_text(size=11),
+        strip.background = element_blank(),
+        strip.placement  = "outside",
+        plot.title = element_text(size=11),
+        panel.border = element_rect(color="black"),
+        axis.text = element_text(size=11),
+        axis.title = element_text(size=11),
+        legend.position = "none",
+        legend.title = element_text(size=11),
+        legend.text = element_text(size=10)) +
+    scale_alpha_continuous(range = c(0,1)) +
+    scale_shape_manual(values=c(15,15)) +
+    labs(y = "Ratio between mean yields\nin sole crop and intercrop areas", 
+         x = "Partial land equivalent ratio for soybean") +
+    scale_y_continuous(breaks = seq(1,1.1,length=5), limits = c(0.99,1.1)) +
+    ggtitle("b. Maize yields homogeneity in intercropping area vs sole cropping area"),
+  
+  ggplot(data=sensi_4_res2_p[which(sensi_4_res2_p$indic_perf=="Ratio_2"),]) + 
+    geom_raster(aes(x=pLER_s, y=pLER_m, fill=value)) + 
+    geom_point(x = 0.56, y = 0.79, pch = 15, size=2, color="white") + 
+    geom_linerange(x=0.56, ymin=0, ymax=0.79, linetype=2, color="white") + 
+    geom_linerange(xmin=0, xmax=0.56, y=0.79, linetype=2, color="white") + 
+    theme_cowplot() + 
+    theme(strip.text.x = element_text(size=11),
+          strip.background = element_blank(),
+          strip.placement  = "outside",
+          axis.text = element_text(size=11),
+          axis.title = element_text(size=11),
+          plot.title = element_text(size=11),
+          panel.border = element_rect(color="black"),
+          #legend.position = "bottom",
+          legend.title = element_text(size=11),
+          legend.text = element_text(size=10)) +
+    facet_wrap(.~freq_crop_lab, nrow=1) + 
+    labs(x = "Partial land equivalent ratio for soybean", y = "Partial land equivalent\nfor maize", 
+         fill = " ") + 
+    scale_fill_gradientn(
+      colours = rev(c(viridis::mako(30), "white", viridis::rocket(30, direction = -1))),
+      values = c(0, (midpoint - limits.min.plots)/(limits.max.plots - limits.min.plots), 1), 
+      limits = c(limits.min.plots, limits.max.plots),
+      breaks = c(seq(limits.min.plots, limits.max.plots, by = 0.1)),
+      na.value = "white", guide = guide_colorbar(barwidth = 0.5, barheight = 7)) +
+    ggtitle("c. Maize ratio production in intercropping area vs sole cropping area"),
+  
+    ncol=1, align="hv", axis="tbrl"
+  
+)
+
+
+
+ggsave(filename = "D:/Mes Donnees/POSTDOC INRAE/PAPERS/02_PNAS/02_Figures/04_sensi_4_heat_map_50ss.png",
+       #filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2_maize.png", 
+       width=12, height=8, bg="white", dpi=300)
+
 
 # ------------------------------------------------------#
 # -------------   {Sensitivity analyses}   -------------#
