@@ -15,8 +15,7 @@ library(terra) ; library(rnaturalearth)
 library(parallel) ; library(doParallel); library(foreach)
 library(CCMHr)
 
-# Homemade function
-# > add specific path to the project
+# Homemade function to read daily climate data from ERA5-land dataset. 
 source(".../functions_to_read_era5.R")
 
 # ----------------------------------------
