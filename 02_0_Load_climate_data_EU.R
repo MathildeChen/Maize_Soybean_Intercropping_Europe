@@ -15,21 +15,22 @@ library(terra) ; library(rnaturalearth)
 library(parallel) ; library(doParallel); library(foreach)
 library(CCMHr) 
 
-# Homemade function
-source("E:/POSTDOC INRAE/DATA/01_CLIMATE/ERA5/functions_to_read_era5.R")
+# Homemade function to read daily climate data from ERA5-land dataset. 
+source(".../functions_to_read_era5.R")
 
 # ----------------------------------------
 # Data 
 
 # > path to climatic data
-path <- "C:/Users/benni/Documents/Post doc/Test"
-path_month <- "C:/Users/benni/Documents/Post doc/Test_month"
+path_day <- "..."
+path_month <- "..."
 
 # > load 1 initial yield file to resample era5 data 
-yield_ref <- rast("E:/POSTDOC INRAE/DATA/02_YIELDS/GDHY_v1.3/gdhy_v1.2_v1.3_20190128/maize/yield_1981.nc4")
+#   yield file is from the GDHY dataset (accessible here: https://doi.pangaea.de/10.1594/PANGAEA.909132)
+yield_ref <- rast(".../GDHY_v1.3/gdhy_v1.2_v1.3_20190128/maize/yield_1981.nc4")
 
 # > coordinates
-load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_dat_coords_EU42.rda")
+load(".../data/00_dat_coords_EU42.rda")
 dat_coords_EU <- dat_coords_eu42
 
 dat_coords_EU <- dat_coords_EU %>%
@@ -162,7 +163,7 @@ for(v in c("max_temp", "min_temp", "rad"))
   
   # > save
   save(era5daily_correct, 
-       file = paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/01_days/temp_eu/era5daily_", v, "_EU.rda"))
+       file = paste0(path_daily, "/era5daily_", v, "_EU.rda"))
   
   # > remove
   rm(era5daily_init, era5daily_correct)
@@ -197,7 +198,7 @@ for(y in c(2000:2023))
   
   # > save
   save(era5daily_correct, 
-       file = paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/01_days/temp_eu/era5daily_", v, "_", y, "_EU.rda"))
+       file = paste0(path_daily, "/era5daily_", v, "_", y, "_EU.rda"))
   
   # > remove unused files
   rm(files_y, era5daily_init, era5daily_correct)
@@ -271,7 +272,7 @@ for(y in c(2000:2023))
   
   # > save
   save(era5daily_correct, 
-       file = paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/01_days/temp_eu/", v, "_temp/era5daily_", v, "_", y, "_EU.rda"))
+       file = paste0(path_daily, "/", v, "_temp/era5daily_", v, "_", y, "_EU.rda"))
   
   # > remove unused files
   rm(files_y, era5daily_init, era5daily_correct)
@@ -304,14 +305,14 @@ era5daily_correct %>%
   summary() # 244 lines per site-year
 
 save(era5daily_correct, 
-     file = paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/01_days/temp_eu/era5daily_et0_EU.rda"))
+     file = paste0(path_daily, "/era5daily_et0_EU.rda"))
 
 # -----------
 # TOTAL PRECIPITATIONS 
 # (directly downloaded from ERA5 Land portal)
 
 # > extract all the names of the files
-filenames_month <- list.files("C:/Users/benni/Documents/Post doc/Test_month", pattern="*.nc", full.names = TRUE)
+filenames_month <- list.files(path_month, pattern="*.nc", full.names = TRUE)
 # > split the files among the different variables 
 filetable_month <- data.frame(filename = filenames_month) %>% 
   # > add variable 
@@ -348,7 +349,7 @@ era5monthly_init_2000_2022 <- merge_era5_data(var = "prec",
 
 # > 2023 (not clean data)
 # > export the data from .nc file
-raster_i_init <- rast("C:/Users/benni/Documents/Post doc/Test_month/download_monthly_total_precipitation_2023.nc") ; raster_i_init
+raster_i_init <- rast(paste0(path_month, "/download_monthly_total_precipitation_2023.nc")) ; raster_i_init
 raster_i <- terra::aggregate(raster_i_init, fact=2, fun="mean") ; raster_i
 
 # > add projection
@@ -429,9 +430,7 @@ era5daily_correct <- era5monthly_init %>%
 
 # > save
 save(era5daily_correct, 
-     file = paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/01_days/temp_eu/era5daily_prec_EU.rda"))
+     file = paste0(path_daily, "/era5daily_prec_EU.rda"))
 
 rm(era5monthly_init, era5daily_correct)
 
-#save(list_data_day_EU, file = "C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/01_days/list_data_day_eu.rda")
-#map(list_data_day_EU, ~{ summary(.x$clim.value)})
