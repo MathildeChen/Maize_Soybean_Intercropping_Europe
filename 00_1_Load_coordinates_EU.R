@@ -13,13 +13,15 @@ library("rnaturalearth") ; library("rnaturalearthdata") ; library(sf) ; library(
 
 # -------------------------------------------------------------------------
 # Home-made functions
-source("E:/POSTDOC INRAE/ANALYSES/00_TOOLS/00_Functions.R")
+# > add specific path to the project
+source(".../00_Functions.R")
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 
 # Reference rasters (with yield and irrigation data)
-ref_rast <- rast("E:/POSTDOC INRAE/DATA/02_YIELDS/GDHY_v1.3/gdhy_v1.2_v1.3_20190128/soybean/yield_2016.nc4")
+# > add specific path to the data from Iizumi, T., Sakai, T. The global dataset of historical yields for major crops 1981–2016. Sci Data 7, 97 (2020). https://doi.org/10.1038/s41597-020-0433-7 ; the dataset is accessible here: https://doi.pangaea.de/10.1594/PANGAEA.909132
+ref_rast <- rast(".../GDHY_v1.3/gdhy_v1.2_v1.3_20190128/soybean/yield_2016.nc4")
 
 # > Reference grid with coordinates of all points in lands
 ref_grid0 <- terra::rast(res=0.5)
@@ -138,5 +140,5 @@ plot_grid(ggplot() +
             ggtitle("EU42 set of data"))
 
 # Save
-save(dat_coords_eu27, file = "E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_dat_coords_EU27.rda")
-save(dat_coords_eu42, file = "E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_dat_coords_EU42.rda")
+save(dat_coords_eu27, file = ".../data/00_dat_coords_EU27.rda")
+save(dat_coords_eu42, file = ".../data/00_dat_coords_EU42.rda")
