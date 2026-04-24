@@ -52,8 +52,9 @@ All analyses were done using R version 4.3.1.
 
 The scripts used to perform this step are: 
 - **01_0_Load_climate_data.R**: derive monthly averages of climate variables (minimum and maximum temperatures, total precipitations, vapor pressure deficit, evapotranspiration, and solar radiations) from the ERA5-land dataset, for the sites with enought soybean production (>1% of the surface dedicated to soybean) and those with 0 soybean (located in regions with unfavorable conditions for crop production) used in the train dataset (at the global scale); 
-- **01_1_Dataset_preparation_irrigation_SPAM2020.R**: add the irrigation fraction from the (SPAM dataset)
-- **01_2_Dataset_preparation.R**: merging climate, irrigation, and yield datasets together for the training dataset;
+- **01_1a_Dataset_preparation.R**: merging climate, irrigation, and yield datasets together for the training dataset;
+- **01_1b_Dataset_preparation_irrigation_SPAM2020.R**: add gridded irrigation fraction (dataset: SPAM)
+- **01_1c_Dataset_preparation_Nrate.R**: add gridded N fertilizer rates (dataset: NPKGRIDS)
 - **01_3_Models_world_train.R**: train the models; 
 - **01_4_Models_world_evaluation.R**: evaulate the models; Models' prediction accuracy were evaluated using two metrics were used (root mean square error and an equivalent of R², the model efficiency) through two cross-validation procedure unsuring good model transferability in time and in space. 
 
