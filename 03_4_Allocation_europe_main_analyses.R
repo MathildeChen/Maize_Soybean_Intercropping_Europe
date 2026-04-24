@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #
-#       03 - Full set of simulations for soybean allocation in Europe
+#       03.1 - Simulations for soybean allocation in Europe
 #       Author: M. Chen, Inrae, 2024
 #         
 # -------------------------------------------------------------------------
