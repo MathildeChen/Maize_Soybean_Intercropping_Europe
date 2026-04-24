@@ -1,0 +1,102 @@
+# -------------------------------------------------------------------------
+# 
+#       01-1b. Prepare data containing fertilization data for soybean and maize
+#              Script added during the review process
+#       Author: M. Chen, Inrae, 2026
+#
+# -------------------------------------------------------------------------
+
+# ----------------------------------
+# > Packages
+library(tidyverse) ; library(terra) ; library(raster)
+
+# -------------------
+# Gridded fertilizer rates applied downloaded from https://doi.org/10.6084/m9.figshare.24616050
+# Reference: Nguyen, T.H., Tang, F.H.M., Conchedda, G. et al. NPKGRIDS: a global georeferenced dataset of N, P2O5, and K2O fertilizer application rates for 173 crops. Sci Data 11, 1179 (2024). https://doi.org/10.1038/s41597-024-04030-4 
+
+# > Soybean 
+all_data_fertilization_s <- rast(".../NPKGRIDSv1.08_soybean.nc")
+# Several rasters are included in the file 
+names(all_data_fertilization_s) 
+
+# Use the raster for N rate 
+raster_fertilization_s <- all_data_fertilization_s$Nrate
+#class       : SpatRaster 
+#dimensions  : 3600, 7200, 1  (nrow, ncol, nlyr)
+#resolution  : 0.05, 0.05  (x, y)
+#extent      : -180, 180, -90, 90  (xmin, xmax, ymin, ymax)
+#coord. ref. : lon/lat WGS 84 
+#source      : NPKGRIDSv1.08_soybean.nc:Nrate 
+#varname     : Nrate 
+#name        :   Nrate 
+#unit        : kg-N/ha 
+
+# > resolution reduction (from 0.05 -> 0.5) 
+# check the new resolution
+agg_fertilization_s <- terra::aggregate(raster_fertilization_s, fact=10, fun="mean") ; agg_fertilization_s
+#class       : SpatRaster 
+#dimensions  : 360, 720, 1  (nrow, ncol, nlyr)
+#resolution  : 0.5, 0.5  (x, y)
+#extent      : -180, 180, -90, 90  (xmin, xmax, ymin, ymax)
+#coord. ref. : lon/lat WGS 84 
+#source(s)   : memory
+#name        :    Nrate 
+#min value   :  -1.0000 
+#max value   : 298.9677
+
+# > table N rate for soybean
+fertilization_s_tab <- data.frame(values(agg_fertilization_s$Nrate),
+                                  crds(agg_fertilization_s$Nrate)) %>%  
+  # > rename
+  rename("Nrate_s"="Nrate") %>% 
+  # > round x and y to 2 digits to be consistent with yield data 
+  mutate(x=round(x,2),
+         y=round(y,2)) %>% 
+  unite("gridcode", x, y, remove=F)
+
+# -------------
+# > Maize
+all_data_fertilization_m <- rast(".../NPKGRIDSv1.08_maize.nc")
+# Several rasters are included in the file 
+names(all_data_fertilization_m) 
+
+# Use the raster for N rate 
+raster_fertilization_m <- all_data_fertilization_m$Nrate ; raster_fertilization_m
+#class       : SpatRaster 
+#dimensions  : 3600, 7200, 1  (nrow, ncol, nlyr)
+#resolution  : 0.05, 0.05  (x, y)
+#extent      : -180, 180, -90, 90  (xmin, xmax, ymin, ymax)
+#coord. ref. : lon/lat WGS 84 
+#source      : NPKGRIDSv1.08_soybean.nc:Nrate 
+#varname     : Nrate 
+#name        :   Nrate 
+#unit        : kg-N/ha 
+
+
+# > resolution reduction (from 0.05 -> 0.5) 
+# check the new resolution
+agg_fertilization_m <- terra::aggregate(raster_fertilization_m, fact=10, fun="mean") ; agg_fertilization_m
+#class       : SpatRaster 
+#dimensions  : 360, 720, 1  (nrow, ncol, nlyr)
+#resolution  : 0.5, 0.5  (x, y)
+#extent      : -180, 180, -90, 90  (xmin, xmax, ymin, ymax)
+#coord. ref. : lon/lat WGS 84 
+#source(s)   : memory
+#name        :    Nrate 
+#min value   :  -1.0000 
+#max value   : 421.0873
+
+# > table N rate for maize
+fertilization_m_tab <- data.frame(values(agg_fertilization_m$Nrate),
+                                  crds(agg_fertilization_m$Nrate)) %>%  
+  # > rename
+  rename("Nrate_m"="Nrate") %>% 
+  # > round x and y to 2 digits to be consistent with yield data 
+  mutate(x=round(x,2),
+         y=round(y,2)) %>% 
+  unite("gridcode", x, y, remove=F)
+
+# -------------------------------------------------------------------------
+# Save 
+save(fertilization_s_tab, file = ".../data/03_Nrate_soybean.rda")
+save(fertilization_m_tab, file = ".../data/03_Nrate_maize.rda")
