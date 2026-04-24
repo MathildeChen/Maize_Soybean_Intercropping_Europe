@@ -16,15 +16,28 @@ library(hydroGOF)
 # ---------------------------------- 
 # Functions 
 # > Load function to cross-validate the models (year-by-year cross-validation)
-source("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_0_Functions.R")
+source(".../00_0_Functions.R")
 
 # ----------------------------------
-# Data 
+# Data containing predictors for both crops
+
 # Soybean
-load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_tab_soybean.rda")
+# > add specific path to the project
+load(".../data/00_tab_soybean.rda")
 
 # Maize
-load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_tab_maize.rda")
+# > add specific path to the project
+load(".../data/00_tab_maize.rda")
+
+# Yield projections 
+# > indicate the path to yield projections 
+path_proj <- "..."
+
+# Performance metrics 
+# > indicate the path to save the predictions of yield for each model -> will be used for the evaluation
+path_predictions <- "..."
+
+
 
 # ----------------------------------
 # CROSS-VALIDATION ON YEARS
@@ -72,7 +85,7 @@ system.time({  # estimate run time
         map_dfr(., ~{
           
           # load model 
-          mod_i     <- loadRDa(paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_mods/", crop, "_", .x$name, "_train.rda"))
+          mod_i     <- loadRDa(paste0(path_proj, "/", crop, "_", .x$name, "_train.rda"))
           predictors_i <- paste(names(mod_i$variable.importance), collapse = " + ")
           
           # model formula
@@ -90,7 +103,7 @@ system.time({  # estimate run time
                                      recompute_scores = recompute_scores_i,
                                      res              = "perf",
                                      save             = TRUE, 
-                                     path_save        = paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_preds/05_GLOBAL/", crop, "/01_YEARS"))
+                                     path_save        = paste0(path_predictions, "/", crop, "/01_YEARS"))
           
           
         }) 
@@ -149,7 +162,7 @@ system.time({  # estimate run time
         map_dfr(., ~{
           
           # load model 
-          mod_i     <- loadRDa(paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_mods/", crop, "_", .x$name, "_train.rda"))
+          mod_i     <- loadRDa(paste0(path_proj, "/", crop, "_", .x$name, "_train.rda"))
           predictors_i <- paste(names(mod_i$variable.importance), collapse = " + ")
           
           # model formula
@@ -167,7 +180,7 @@ system.time({  # estimate run time
                                      recompute_scores = recompute_scores_i,
                                      res              = "perf",
                                      save             = TRUE, 
-                                     path_save        = paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_preds/05_GLOBAL/", crop, "/02_GEO"))
+                                     path_save        = paste0(path_predictions, "/", crop, "/02_GEO"))
           
           
         }) 
@@ -181,7 +194,6 @@ system.time({  # estimate run time
 
 # ----------------------------------
 # MERGE PREDICTIONS 
-data_path <- "C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/"
 
 # > Function to read rda into list
 rda2list <- function(file) {
@@ -202,7 +214,7 @@ tab_preds <- list(
     # Predictions of yield 
     # > Cross-validated on years
     # > folder where preds are stored
-    folder <- paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_preds/05_GLOBAL/", .x$name, "/01_YEARS")
+    folder <- paste0(path_predictions, "/", .x$name, "/01_YEARS")
     files <- list.files(folder, pattern = ".rda$")
     
     # > merge all preds for 1 country
@@ -215,7 +227,7 @@ tab_preds <- list(
     # -----------------------
     # > Cross-validated on sites
     # > folder where preds are stored
-    folder <- paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_preds/05_GLOBAL/", .x$name, "/02_GEO")
+    folder <- paste0(path_predictions, "/", .x$name, "/02_GEO")
     files <- list.files(folder, pattern = ".rda$")
     
     # > merge all preds for 1 country
@@ -297,8 +309,8 @@ tab_perf_labelled <- tab_perf %>%
     pred_perf_value_lab = if_else(pred_perf_value < 0, 0, pred_perf_value)) 
 
 # > Save predictions and model performances
-save(tab_preds,         file = paste0(data_path, "05_preds/05_GLOBAL/tab_preds.rda"))
-save(tab_perf_labelled, file = paste0(data_path, "05_preds/05_GLOBAL/tab_perf_models.rda"))
+save(tab_preds,         file = paste0(path_predictions, "/tab_preds.rda"))
+save(tab_perf_labelled, file = paste0(path_predictions, "/tab_perf_models.rda"))
 
 
 
