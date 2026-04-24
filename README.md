@@ -38,7 +38,7 @@ Finally, these scenarios are used to assess the efficiency of intercropping over
 - for parallelization of the analyses: *parallel*, *doParallel*, *foreach*
 - for random forest models fitting: *ranger*
 
-All analyses were done using R version 4.3.1. 
+All analyses were done using R version 4.4.2. 
 
 ## Analyses step: 
 
@@ -67,6 +67,7 @@ References and access to the dataset:
 - Historical climate data: Hersbach, H., Bell, B., Berrisford, P., Biavati, G., Horányi, A., Muñoz Sabater, J., Nicolas, J., Peubey, C., Radu, R., Rozum, I., Schepers, D., Simmons, A., Soci, C., Dee, D., Thépaut, J-N. (2023): ERA5 hourly data on single levels from 1940 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS), DOI: 10.24381/cds.adbb2d47 (Accessed in February 2023) ; the data is accessible here: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=download  
 - Irrigation fraction: Yu, Q., You, L., Wood-Sichra, U., Ru, Y., Joglekar, A. K. B., Fritz, S., Xiong, W., Lu, M., Wu, W., and Yang, P.: A cultivated planet in 2010 – Part 2: The global gridded agricultural-production maps, Earth Syst. Sci. Data, 12, 3545–3572, https://doi.org/10.5194/essd-12-3545-2020, 2020. SPAM2010 can be downloaded via an open-data repository (DOI: https://doi.org/10.7910/DVN/PRFF8V; IFPRI, 2019).
 - Crop calendars provided by the Agricultural Market Information System: www.amis-outlook.org/amis-about/calendars/soybeancal/en/
+- Gridded N fertilizers rates: Nguyen, T.H., Tang, F.H.M., Conchedda, G. et al. NPKGRIDS: a global georeferenced dataset of N, P2O5, and K2O fertilizer application rates for 173 crops. Sci Data 11, 1179 (2024). https://doi.org/10.1038/s41597-024-04030-4
 
 ## Step 2: Use the best models to projet soybean and maize yield in the EU 
 
@@ -79,17 +80,17 @@ The output of this step is the yield projections in the EU, which are further us
 ## Step 3: Scenarios of soybean and maize allocation in the EU
 
 - **03_1_Allocation_europe_main_analyses.R**: this script performs the allocation of soybean and maize in sole or intercropping assuming given pLERs values, a production target of soybean (in t), a maximum surface allocated (25 Mha), the frequence of crop in the rotation (range between 0 and 1, 0 = never and 1 = every year). Here, the scenarios considered included various pLERs for soybean (from 0.3 to 0.7 by 0.1 increment) and for maize (from 0.5 to 0.9 by 0.1 increment), and of cropping frequencies (from 1/7 to 1/2).
-- **03_2_Allocation_europe_full_simulations.R**: this script performs sensitivity analyses with finer grid of pLERs (with 0.01 increment); 
+- **03_2_Allocation_europe_full_simulations.R**: this script performs sensitivity analyses with finer grid of pLERs (with 0.01 increment) and varying N rates accross space (NPKGRIDS dataset); 
 
-## Step 4: Figures production 
-These scripts listed below produce the figures and supplementary figures of the paper: 
-- **04_Figures.R**: main Figures and supplementary figures
-
-## Step 5: new analyses required during the revision process: 
+## Step 4: new analyses required during the revision process: 
 
 Following the revision of the article by 3 reviewers, 2 additional scripts have been added: 
-- **05_1_Allocation_europe_sensi_analyses_N_use.R**: performs the sensitivity analysis in less favorable conditions for intercropping (i.e., higher N inputs and a null temporal niche differentiation);
-- **05_2_Representativity_Xu_et_al_vs_EU.R**: this scripts compares the climate conditions in the sites used to project soybean and maize in the EU and the sites included in the meta-analysis of Xu et al. (2020). 
+- **03_3_Allocation_europe_sensi_analyses_N_use.R**: performs the sensitivity analysis in less favorable conditions for intercropping (i.e., higher N inputs and a null temporal niche differentiation);
+- **04_1_Representativity_Xu_et_al_vs_EU.R**: this scripts compares the climate conditions in the sites used to project soybean and maize in the EU and the sites included in the meta-analysis of Xu et al. (2020). 
 
+## Step 5: Figures production 
+
+These scripts listed below produce the figures and supplementary figures of the paper: 
+- **05_Figures_V5.R**: main Figures and supplementary figures
 
 All these scripts will be shared publicly once the paper has been accepted for publication in a scientific review. 
