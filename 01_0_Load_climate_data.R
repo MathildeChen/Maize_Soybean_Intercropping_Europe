@@ -16,19 +16,21 @@ library(parallel) ; library(doParallel); library(foreach)
 library(CCMHr)
 
 # Homemade function
-source("E:/POSTDOC INRAE/DATA/01_CLIMATE/ERA5/functions_to_read_era5.R")
+# > add specific path to the project
+source(".../functions_to_read_era5.R")
 
 # ----------------------------------------
 # Data 
 
-# > path to climatic data
-path <- "C:/Users/benni/Documents/Post doc/Test"
+# > path to daily climatic data of ERA5-land (accessible here: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=download)
+path <- "..."
 
 # > load 1 initial yield file to resample era5 data 
-yield_ref <- rast("E:/POSTDOC INRAE/DATA/02_YIELDS/GDHY_v1.3/gdhy_v1.2_v1.3_20190128/maize/yield_1981.nc4")
+#   yield file is from the GDHY dataset (accessible here: https://doi.pangaea.de/10.1594/PANGAEA.909132)
+yield_ref <- rast(".../GDHY_v1.3/gdhy_v1.2_v1.3_20190128/maize/yield_1981.nc4")
 
 # > yield data to retrieve coordinates
-load("E:/POSTDOC INRAE/DATA/02_YIELDS/GDHY_v1.3/yield_no.trend_full.rda")
+load(".../GDHY_v1.3/yield_no.trend_full.rda")
 
 # > check if there is some duplicate (normally no)
 data_crop %>% 
