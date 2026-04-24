@@ -19,13 +19,16 @@ library(hydroGOF)
 # ----------------------------------
 # Data 
 # Soybean
-load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_tab_soybean.rda")
+# > add specific path to the project
+load(".../data/00_tab_soybean.rda")
 
 # Maize
-load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_tab_maize.rda")
+# > add specific path to the project
+load(".../data/00_tab_maize.rda")
 
 # ----------------------------------
 # Data to use for models fitting
+# > select the crop/dataset 
 
 crop <- "soybean"
 #crop <- "maize"
@@ -45,7 +48,8 @@ length(unique(tab_sites$gridcode))
 
 # > FIT MODELS ON FULL WORLD DATASET
 
-# Models list (top 3 of models based on previous analyses)
+# Models list 
+# top 4 of models based on previous analyses in Guilpart et al. (2022, 10.1038/s43016-022-00481-3) and Chen et al. (2024, 10.1088/1748-9326/ad42b5)
 list_models <- list(
   pca.m.2      = list(name = "pca.m.2", formula = paste0(names(dat_pred %>% dplyr::select(starts_with("PC1_month"), starts_with("PC2_month"))), collapse = " + ")),
   pca.m.3      = list(name = "pca.m.3", formula = paste0(names(dat_pred %>% dplyr::select(starts_with("PC1_month"), starts_with("PC2_month"), starts_with("PC3_month"))), collapse = " + ")),
@@ -80,7 +84,8 @@ list_models %>%
                    num.tree=500,
                    importance="impurity") 
     
-    save(mod, file = paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_mods/", crop, "_", model_name, "_train.rda"))
+    # > indicate the correct path where to save the outputs
+    save(mod, file = paste0(".../", crop, "_", model_name, "_train.rda"))
 
 })
 
