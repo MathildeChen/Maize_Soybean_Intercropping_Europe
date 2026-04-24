@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 # 
-#       01-1. Prepare data containing yield, climate, and irrigation data  
+#       01-1a. Prepare data containing yield, climate, and irrigation data  
 #       Author: M. Chen, Inrae, 2024
 #
 # -------------------------------------------------------------------------
@@ -14,8 +14,8 @@ library(parallel) ; library(doParallel); library(foreach)
 # > machine learning
 library(caret) ; library(ranger) ; library(fastshap)
 
-# Homemade function
-source("E:/POSTDOC INRAE/DATA/01_CLIMATE/ERA5/functions_to_read_era5.R")
+# Homemade function to read daily climate data from ERA5-land dataset. 
+source(".../functions_to_read_era5.R")
 
 # ----------------------------------------
 # Compute monthly averages from daily averages
