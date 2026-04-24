@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #
-#       03-1 - Simulations for soybean allocation in Europe (main analysis)
+#       03-3 - Simulations for soybean allocation in Europe (sensitivity analysis according to N rates)
 #       Author: M. Chen, Inrae, 2024
 #         
 # -------------------------------------------------------------------------
