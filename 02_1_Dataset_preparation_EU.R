@@ -15,7 +15,11 @@ library(parallel) ; library(doParallel); library(foreach)
 library(caret) ; library(ranger) ; library(fastshap)
 
 # Home-made functions performing the dimension reductions
-source("E:/POSTDOC INRAE/ANALYSES/A_MODEL_COMP/00_Functions_dimension_reduction.R")
+source(".../00_Functions_dimension_reduction.R")
+
+# > path to climatic data
+path_day <- "..."
+path_month <- "..."
 
 # ----------------------------------------
 # Compute monthly averages from daily averages
@@ -29,7 +33,7 @@ monthly_average <- function(var_i,
   if(load==TRUE)
   {
     if(is.null(crop) == T){ message("No crop is provided in the arguments") } 
-    data <- loadRDa(paste0("C:/Users/benni/Documents/Post doc/ERA5_daily/", crop, "/era5daily_data_", var_i, ".rda"))
+    data <- loadRDa(paste0(path_day, "/", crop, "/era5daily_data_", var_i, ".rda"))
   }
   
   # > or use the data provided
@@ -62,9 +66,10 @@ monthly_average <- function(var_i,
 
 # -------------------
 # Irrigation
+# retrieved from the SPAM dataset (accessible at: https://doi.org/10.7910/DVN/PRFF8V)
 
 # Soybean 
-raster_irrigation_s <- raster::raster("E:/POSTDOC INRAE/DATA/02_YIELDS/SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_SOYB_I.tif"); raster_irrigation_s
+raster_irrigation_s <- raster::raster(".../SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_SOYB_I.tif"); raster_irrigation_s
 #class      : RasterLayer 
 #dimensions : 2160, 4320, 9331200  (nrow, ncol, ncell)
 #resolution : 0.083333, 0.083333  (x, y)
@@ -103,7 +108,7 @@ summary(irrigation_s_tab$irrigated_portion_perc)
 # 0.000000  0.000000  0.000000  0.005443  0.000000 22.159389
 
 # > Maize
-raster_irrigation_m <- raster::raster("E:/POSTDOC INRAE/DATA/02_YIELDS/SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_MAIZ_I.tif"); raster_irrigation_m
+raster_irrigation_m <- raster::raster(".../SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_MAIZ_I.tif"); raster_irrigation_m
 #class      : RasterLayer 
 #dimensions : 2160, 4320, 9331200  (nrow, ncol, ncell)
 #resolution : 0.083333, 0.083333  (x, y)
@@ -176,7 +181,7 @@ for(var_i in c('max_2m_temperature', 'min_2m_temperature', 'surface_net_solar_ra
   var_i_abb <- vars_names[which(vars_names$clim.var==var_i), "clim.var_abb"]
   
   # > Load climatic data
-  era5_var_i <- loadRDa(paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/01_days/temp_eu/era5daily_", var_i_abb, "_EU.rda"))
+  era5_var_i <- loadRDa(paste0(path_day, "/era5daily_", var_i_abb, "_EU.rda"))
   
   # -------------------------
   # > Compute monthly averages based on daily data 
@@ -295,8 +300,8 @@ tab_climate_EU_soybean <- tab_climate_EU %>%
 names(tab_climate_EU_soybean)
 
 # Load PCA loads and scores derived from PCA on monthly averages at global scale
-load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_tab_soybean.rda")
-pca_soybean <- loadRDa("C:/Users/benni/Documents/Post doc/ERA5_daily/soybean/pca_soybean.rda")
+load(".../data/00_tab_soybean.rda")
+pca_soybean <- loadRDa(paste0(path_day, "/soybean/pca_soybean.rda"))
 
 # change name for vpd_1
 pca_soybean$list_pca_per_variable$vpd_1 <- pca_soybean$list_pca_per_variable$vapor_pressure_deficit
@@ -377,8 +382,8 @@ tab_climate_EU_maize <- tab_climate_EU %>%
 names(tab_climate_EU_maize)
 
 # Load PCA loads and scores derived from PCA on monthly averages at global scale
-load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_tab_maize.rda")
-pca_maize <- loadRDa("C:/Users/benni/Documents/Post doc/ERA5_daily/maize/pca_maize.rda")
+load(".../data/00_tab_maize.rda")
+pca_soybean <- loadRDa(paste0(path_day, "/maize/pca_maize.rda"))
 
 pca_maize$list_pca_per_variable$vpd_1 <- pca_maize$list_pca_per_variable$vapor_pressure_deficit
 
@@ -494,25 +499,11 @@ summary(tab_maize_EU)
 
 # ---------------------
 # Save
-save(tab_soybean_EU, file = "E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/02_tab_eu_soybean.rda")
-save(tab_maize_EU, file = "E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/02_tab_eu_maize.rda")
+save(tab_soybean_EU, file = ".../data/02_tab_eu_soybean.rda")
+save(tab_maize_EU, file = ".../data/02_tab_eu_maize.rda")
 
 # ---------------------
 stop()
-# ---------------------
-# Graphs
-
-library(metR)
-
-tab_soybean_EU %>% 
-  ggplot(., aes(x=x,y=y)) +
-  #geom_contour_fill()
-  geom_tile(aes(fill=monthly_min_2m_temperature_1))+
-  facet_wrap(.~year)+
-  theme_map() +
-  theme(legend.position = "bottom") +
-  scale_fill_gradientn(colours = viridis::viridis(100, direction = -1), 
-                       na.value = "red") 
 
   
 
