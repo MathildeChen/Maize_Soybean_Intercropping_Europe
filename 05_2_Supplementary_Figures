@@ -1460,4 +1460,162 @@ ggsave(sp20,
        filename = paste0(path_project, "/Sup_Fig20_map_sensi_eu_ext.png"),
        width=8, height=8, bg="white", dpi=300)
 
-# -------------------------------------
+# ---------------------------------------
+# Supplementary Figure 21. Soybean and maize yield distribution
+# from 1981 to 2016 in sites located in producing area included in the training dataset
+
+paste0(round(mean(tab_soybean$Ya), 2), " (", round(sd(tab_soybean$Ya), 2), ")\n[", round(min(tab_soybean$Ya), 2), " - ", round(max(tab_soybean$Ya), 2), "]")
+# "2.04 (1.38) [0 - 6.7]"
+
+paste0(round(mean(tab_maize$Ya), 2), " (", round(sd(tab_maize$Ya), 2), ")\n[", round(min(tab_maize$Ya), 2), " - ", round(max(tab_maize$Ya), 2), "]")
+# "7.58 (5.08) [0 - 19.97]"
+
+# Global and by country
+sp21 <- plot_grid(
+  plot_grid(
+    ggplot() + 
+      geom_density(data=tab_soybean %>% filter(country_name != "Desert"), aes(x=Ya)) + 
+      geom_point(data=tab_soybean %>% 
+                   filter(country_name != "Desert") %>% 
+                   group_by(country_name) %>% 
+                   summarise(Ya_med = median(Ya)), 
+                 aes(x=Ya_med, y=0, color=country_name), 
+                 shape = 18, size = 3) + 
+      scale_color_viridis_d(name = "magma") +
+      theme_cowplot() + 
+      theme(legend.position = "none",
+            axis.title.x = element_blank(),
+            plot.margin = unit(c(0,0,0,0), "cm")) + 
+      ggtitle("a.") + 
+      labs(x = "Yield (tons/ha)", y = "Density"),
+    
+    ggplot() + 
+      geom_boxplot(data=tab_soybean %>% 
+                     filter(country_name != "Desert"), 
+                   aes(x=reorder(country_name, Ya, median), y=Ya), outlier.shape = NA) + 
+      geom_point(data=tab_soybean %>% filter(country_name != "Desert") %>% 
+                   group_by(country_name) %>% 
+                   summarise(Ya_med = median(Ya)), 
+                 aes(x=reorder(country_name, Ya_med, max), y=Ya_med, color=country_name), 
+                 shape = 18, size = 3) + 
+      scale_color_viridis_d(name = "magma") +
+      theme_cowplot() + 
+      theme(legend.position = "none",
+            plot.margin = unit(c(0,0,0,0), "cm")) + 
+      labs(y = "Yield (tons/ha)", x="") +
+      coord_flip(),
+    ggplot() +
+      theme_void(),
+    ncol=1, align ="hv", axis="tbrl", rel_heights = c(0.33,0.33,0.33) 
+  ),
+  
+  plot_grid(
+    ggplot() + 
+      geom_density(data=tab_maize %>% filter(country_name != "Desert"), aes(x=Ya)) + 
+      geom_point(data=tab_maize %>% 
+                   filter(country_name != "Desert") %>% 
+                   group_by(country_name) %>% 
+                   summarise(Ya_med = median(Ya)), 
+                 aes(x=Ya_med, y=0, color=country_name), 
+                 shape = 18, size = 3) + 
+      scale_color_viridis_d(name = "magma") +
+      theme_cowplot() + 
+      theme(legend.position = "none",
+            axis.title.x = element_blank(),
+            plot.margin = unit(c(0,0,0,0), "cm")) + 
+      ggtitle("b.") + 
+      labs(x = "Yield (tons/ha)", y = "Density"),
+    
+    ggplot() + 
+      geom_boxplot(data=tab_maize %>% 
+                     filter(country_name != "Desert"), 
+                   aes(x=reorder(country_name, Ya, median), y=Ya), outlier.shape = NA) + 
+      geom_point(data=tab_maize %>% filter(country_name != "Desert") %>% 
+                   group_by(country_name) %>% 
+                   summarise(Ya_med = median(Ya)), 
+                 aes(x=reorder(country_name, Ya_med, max), y=Ya_med, color=country_name), 
+                 shape = 18, size = 3) + 
+      scale_color_viridis_d(name = "magma") +
+      theme_cowplot() + 
+      theme(legend.position = "none",
+            plot.margin = unit(c(0,0,0,0), "cm")) + 
+      labs(y = "Yield (tons/ha)", x="") +
+      coord_flip(),
+    ncol=1, align ="hv", axis="tbrl", rel_heights = c(0.33,0.66) 
+  ),
+  ncol=2, align ="hv", axis="tbrl" 
+)
+
+ggsave(plot = sp21, 
+       filename = paste0(path_sup, "/Sup_Fig21_density_yields.png"),
+       width=10, height=8, bg="white", dpi=300)
+
+
+# ---------------------------------------
+# Supplementary Figure 22. Projected yields of soybean and maize 
+# in the EU according to four predictive models.
+# Breaks for geom_contour_fill, geom_contour, geom_text_contour 
+breaks_plot   <- seq(0,10, by=1)
+breaks_labels <- seq(0,10, by=1)
+
+# Map of average yield predictions in continental Europe
+sp22 <- Ya_pred_eu %>% 
+  filter(id_eu27==1) %>%
+  # > label according to crops
+  mutate(crop = if_else(crop=="maize", "Maize", "Soybean")) %>% 
+  mutate(crop = factor(crop, levels=c("Soybean", "Maize"))) %>% 
+  mutate(model = recode(model,
+                        "avg.m"  ="Model incorportaing\nmonthly averages",  
+                        "avg.s"  ="Model incorporating\nseasonal averages",  
+                        "pca.m.2"="Model incorportaing\ntwo first principal components\nof each climate variable\n(main analysis)",
+                        "pca.m.3"="Model incorportaing\nthree first principal components\nof each climate variable" ) ) %>%
+  mutate(model = factor(model, levels=c("Model incorportaing\ntwo first principal components\nof each climate variable\n(main analysis)",
+                                        "Model incorportaing\nmonthly averages",  
+                                        "Model incorporating\nseasonal averages",  
+                                        "Model incorportaing\nthree first principal components\nof each climate variable"))) %>%
+  # > long format 
+  gather(key=year, value=Ya_pred, starts_with("X2")) %>% 
+  # > for each pixel, recompute yields (in t/ha)
+  group_by(model, crop, x, y) %>% 
+  mutate(Ya_pred_t_ha = Ya_pred/cropland_area_ha) %>%
+  summarise(mean_Ya_pred = mean(Ya_pred, na.rm=T)) %>%
+  mutate(mean_Ya_pred = ifelse(is.na(mean_Ya_pred)==T, 0, mean_Ya_pred)) %>% 
+  # > plot
+  ggplot(.) + 
+  geom_sf(data=eu27, fill="grey94") +
+  geom_contour_fill(aes(x=x, y=y, z=mean_Ya_pred), 
+                    breaks = breaks_plot,
+                    na.fill = T, 
+                    global.breaks = F,
+                    clip = eu27) +
+  geom_sf(data=eu27_ext, fill="transparent") +
+  geom_contour(aes(x=x, y=y, z=mean_Ya_pred), 
+               color = "white", 
+               linewidth = 0.05,
+               breaks = breaks_plot) +
+  facet_grid(crop~model, switch = "y") + 
+  theme_cowplot() + 
+  coord_sf(xlim = c(-11, 51), ylim = c(33,71), expand = FALSE) + 
+  theme(legend.position = "bottom",
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=10),
+        axis.title = element_blank(),
+        axis.text = element_text(size=5),
+        strip.background = element_blank(),
+        strip.text.x = element_text(hjust = 0.1, face = "bold"),
+        strip.placement = "outside",
+        strip.text.y.left = element_text(hjust = 0.1, angle = 0, face = "bold")) +
+  scale_fill_gradientn(colours = c("transparent", viridis::magma(n=100)),
+                       breaks = breaks_labels, 
+                       labels = breaks_labels,
+                       guide = guide_colorbar(barwidth = 20, barheight = 0.5, title.position = "left", title = expression("Mean yield t " ~ ha^-1)))
+
+ggsave(sp22, 
+       filename = paste0(path_sup, "/Sup_Fig22_sensi_1_pred_maps_eu_models.png"), 
+       height=8, width=14, bg="white", dpi = 300)
+
+
+
+
+
+
