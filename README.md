@@ -91,6 +91,7 @@ Following the revision of the article by 3 reviewers, 2 additional scripts have 
 ## Step 5: Figures production 
 
 These scripts listed below produce the figures and supplementary figures of the paper: 
-- **05_Figures_V5.R**: main Figures and supplementary figures
+- **05_Figures_V5.R**: main Figures and Table
+- **05_2_Supplementary_Figures.R**: Supplementary Figures
 
 All these scripts will be shared publicly once the paper has been accepted for publication in a scientific review. 
