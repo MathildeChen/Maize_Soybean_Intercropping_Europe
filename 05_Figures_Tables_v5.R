@@ -106,6 +106,9 @@ res2 <- format_alloc(results_allocations =  allocations %>% map_dfr(., ~{.x$res1
 #    as intercropping 
 res3 <- format_alloc(results_allocations =  allocations %>% map_dfr(., ~{.x$res3}, .id="scenario"))
 
+# > Results of sensitivity analysis with varying pLERs and crop frequency values
+load(paste0(path_project, "00_DATA/sensi/sensi_4_res1.rda"))
+
 # ----------------------------------------
 # ---------------------------------------- 
 # Figure 1. 
@@ -318,11 +321,11 @@ ggsave(filename = paste0(path_project, "FIGURES/Figure1.pdf"),
        height=18, width=21, bg="white", units = "cm", dpi = 300)
 
 
-# -------------------------
-# Table 1 - Area requirements to reach the same production
-# of maize and soybean in intercropping and sole cropping
+# ----------------------------------------
+# ---------------------------------------- 
+# Table 1. 
+# Legend: Soybean and maize coproduction and area requirement for 25, 50, 75, and 100% soybean self-sufficiency in the European Union (EU) achieved by intercropping or sole cropping. 
 
-# Associated table 
 tab_p4 <- res3 %>%
   filter(pLER_s == 0.56,
          pLER_m == 0.79, 
@@ -339,107 +342,17 @@ tab_p4 <- res3 %>%
          TOTAL_Sole = `crop 1_sole crop` + `crop 2_sole crop` + `landsaving_sole crop`) %>%
   mutate(diff = TOTAL_Intercropping - TOTAL_Sole)
 
-save(tab_p4, file="E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/04_landsaving_v2.rda")
+# Save table
+save(tab_p4, = paste0(path_project, "FIGURES/Table_1.rda"))
 
+# ----------------------------------------
+# ---------------------------------------- 
+# Figure 3. 
+# Legend: Levels of soybean (a) and maize (b) self-sufficiency in the European Union (EU) achieved from intercropping for different assumptions of partial land equivalent ratio (pLER) and crop return frequency. 
+# Subtitle: Crop frequencies of one year in seven, six, five, four, three, or two correspond to allocating maize-soybean intercropping on 14%, 16%, 20%, 25%, 33%, or 50% of cropland area in each grid-cell. Intercropping was first allocated to soybean highest-yielding grid-cells, and in all cases total intercropping area was constrained to not exceed 25% of croplands in the EU (i.e., 25 Mha). Squares represent the results obtained with average productive performances of maize-soybean intercropping systems (i.e., pLER of 0.56 for soybean and 0.79 for maize) estimated in a previous meta-analysis (Xu et al., 2020).
 
-# --------------------------
-# Figure 3. Maximum levels of soybean self-sufficiency reached with intercropping 
-# according to varying values of pLER of soybean and crop return frequency
-
-# > is it possible to cover EU27 soybean 
-# consumption using intercropping?
-
-p2 <- res2 %>% 
-  # > Keep results for the plot
-  filter(target_soybean == 36.3,        # soybean target production = 100% consumption
-         strategy == "Intercropping", # intercropping
-         crop == "Soybean",           # soybean
-         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
-         pLER_m == 0.79               # pLER maize is set as reference value
-  ) %>%
-  # > Self-sufficiency coverage for each scenario 
-  mutate(perc_eu_supply=(production/(36.3*10^6))*100) %>%
-  # > Reference values as reference for the dotted lines
-  mutate(pLER_lab = case_when(
-    pLER_lab == "References values for pLERs"~0, 
-    TRUE~1)) %>% 
-  # > Plot
-  ggplot(., aes(x = freq_crop_lab, 
-                y = perc_eu_supply,
-                group=pLER_s)) +
-  geom_hline(yintercept = c(25, 50, 75, 100), 
-             linetype=2, 
-             color = "grey90") +
-  geom_line(aes(color=as.factor(pLER_s)),
-            linewidth=1.2) +
-  geom_line(aes(alpha=as.factor(pLER_lab)), 
-            linewidth=1, color="white", linetype=3) +
-  geom_point(aes(color=as.factor(pLER_s), shape=as.factor(pLER_s)), 
-             size=3) +
-  # current level of self-sufficiency (cake+grain)
-  geom_hline(yintercept = 16, color='black', lty=2) +
-  annotate("text", x = 0.5, y = 11.5, hjust=0, 
-           label = "Current level of soybean (cake + grains)\nself-sufficiency in the EU: 7.4%", 
-           color="black", fontface = 'italic') +
-  scale_color_manual(values = c(viridis::viridis(6)[4:6], 
-                                viridis::inferno(direction = -1, 6)[2:4])) +
-  scale_alpha_manual(values = c(0,1), guide=guide_none()) +
-  scale_y_continuous(breaks = c(25,50,75,100)) +
-  guides(color = guide_legend(title = "Partial land equivalent ratio for soybean", reverse = T, nrow=1),
-         shape = guide_legend(title = "Partial land equivalent ratio for soybean", reverse = T, nrow=1)) +
-  theme_cowplot() +
-  theme(strip.text.y = element_text(angle=0, size=11),
-        strip.text.x = element_text(size=11),
-        axis.text = element_text(size=11),
-        axis.title = element_text(size=11),
-        #legend.position = c(-0.0,.8),
-        legend.position = "bottom",
-        legend.title = element_text(size=11),
-        legend.text = element_text(size=10),
-        legend.background = element_rect(fill="white")#,plot.margin = unit(c(0,3,0,0), "cm")
-  ) +
-  #lims(y=c(0,101)) +
-  coord_cartesian(clip = "off") +
-  labs(x = "\nReturn frequency", y = "Soybean self-sufficiency level (%)\n") ; p2
-
-# Save
-ggsave(p2, 
-       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.png", 
-       width=22, height=18, bg="white", units = "cm", dpi=300)
-
-ggsave(p2, 
-       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.pdf", 
-       width=22, height=18, bg="white", units = "cm", dpi=300)
-
-# Associated table
-tab_p2 <- res2 %>% 
-  # > Keep results for the plot
-  filter(target_soybean_lab == "100%",        # soybean target production = 100% consumption
-         strategy == "Intercropping", # intercropping
-         crop == "Soybean",           # soybean
-         pLER_s %in% c(0.3, 0.4, 0.5, 0.56, 0.6, 0.7),
-         pLER_m == 0.79               # pLER maize is set as reference value
-  ) %>%
-  # > Self-sufficiency coverage for each scenario 
-  mutate(perc_eu_supply=(production/(target_soybean*10^6))*100,
-         perc_eu_supply=if_else(perc_eu_supply>100, 100, perc_eu_supply), 
-         surface = surface/10^6,
-         production=production/10^6) %>%
-  dplyr::select(freq_crop_lab, pLER_s, surface, production, perc_eu_supply) %>%
-  gather(key=var, value=val, -freq_crop_lab, -pLER_s) %>%
-  mutate(val=round(val,1)) %>%
-  spread(key=freq_crop_lab, value=val) %>%
-  arrange(var, pLER_s)
-
-save(tab_p2, file = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2.rda")
-
-# Try with another type of presentation
-# PC
-#load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/sensi/sensi_4_res1.rda")
-# CIRAD
-load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/sensi/sensi_4_res1.rda")
-
-tab_p <- sensi_4_res1%>% 
+# Format of the results
+tab_p <- sensi_4_res1 %>% 
   # > Keep results for the plot
   filter(target_soybean == 36.3,        # soybean target production = 100% consumption
          strategy == "Intercropping", # intercropping
@@ -452,112 +365,105 @@ tab_p <- sensi_4_res1%>%
                         TRUE~0)) %>%
   filter(keep==1) %>%
   # > Self-sufficiency coverage for each scenario 
-  mutate(target_soybean = if_else(crop=="Soybean", target_soybean, 85.1), 
-         perc_eu_supply=(production/(target_soybean*10^6))*100) %>% 
-  mutate(crop=recode(crop,"Soybean"="a. Soybean", "Maize"="b. Maize")) %>% 
-  mutate(freq_crop_lab=recode(freq_crop_lab, 
-                              "1 year in 7"="one-in-seven",
-                              "1 year in 6"="one-in-six",
-                              "1 year in 5"="one-in-five",
-                              "1 year in 4"="one-in-four",
-                              "1 year in 2"="one-in-three",
-                              "1 year in 3"="one-in-two")) %>%
+  mutate(target_soybean = if_else(crop == "Soybean", target_soybean, 85.1), 
+         perc_eu_supply = (production / (target_soybean*10^6)) * 100) %>% 
+  # > Change the labels for the plot 
+  mutate(crop = recode(crop, "Soybean" = "a.", "Maize" = "b.")) %>% 
+  mutate(freq_crop_lab=recode(freq_crop_lab, "1 year in 7"="one-in-seven","1 year in 6"="one-in-six","1 year in 5"="one-in-five","1 year in 4"="one-in-four","1 year in 3"="one-in-three","1 year in 2"="one-in-two")) %>%
   # > Reference values as reference for the dotted lines
-  mutate(pLER_lab = case_when(
-    pLER_lab == "0.56 - 0.79"~1, 
-    TRUE~0))
+  mutate(pLER_lab = case_when(pLER_lab == "0.56 - 0.79" ~ 1, TRUE ~ 0))
 
 # > Plot
 plot_grid(
-  # > a. Soybean
-  ggplot(tab_p[which(tab_p$crop=="a. Soybean"),], aes(x = freq_crop_lab, y = perc_eu_supply)) +
+  # > SOYBEAN
+  ggplot(tab_p[which(tab_p$crop=="a."),], aes(x = freq_crop_lab, y = perc_eu_supply)) +
     # refs
-    geom_hline(yintercept = c(25,50,75,100,125,150), linetype=2, color = "grey90") +
-    geom_path(aes(color=as.factor(pLER), group=interaction(crop,pLER)), 
-              linewidth=1) +
-    geom_point(aes(color=as.factor(pLER), shape=as.factor(pLER_lab)),
-               size=2) +
+    geom_hline(yintercept = c(25,50,75,100,125,150), 
+               linetype=2, lwd=0.5, color = "grey90") +
+    geom_path(aes(color=as.factor(pLER),
+                  lty = as.factor(pLER_lab),
+                  group=interaction(crop,pLER)), 
+              linewidth=0.75) +
+    geom_point(aes(color=as.factor(pLER), shape=as.factor(pLER)),
+               size=2.5) +
     # current level of self-sufficiency 
     geom_hline(yintercept = 16, color='black', lty=2, linewidth=0.5) +
     annotate("text", x = 6, y = 11.5, hjust=1, 
              label = "Current level in the EU: 16%", 
              color="black", fontface = 'italic') +
-    scale_color_manual(values = viridis::rocket(7, direction = -1)[2:7]) +
-    scale_shape_manual(values=c(3,15)) +
+    scale_color_manual(values = viridis::magma(13, direction = -1)[2:7]) +
+    #scale_color_grey() +
+    scale_linetype(guide = guide_none()) +
     scale_y_continuous(breaks = c(25,50,75,100,125,150), limits = c(10,166)) +
     guides(color = guide_legend(title = "\nPartial land equivalent ratio for soybean:", ncol=3),
            shape = guide_none()) +
     facet_wrap(.~crop)+
-    theme_cowplot() +
+    theme_cowplot(font_size = 10) +
     theme(strip.text.y.left = element_text(angle=0, size=13, face = "bold"),
-          strip.text.x = element_text(size=13, face = "bold", hjust = 0),
+          strip.text.x = element_text(size=10, face = "bold", hjust = 0),
           strip.background = element_blank(),
-          axis.text.x = element_text(size=12, angle=45, 
-                                     vjust = 0.85, hjust = 0.9),
-          axis.text.y = element_text(size=12),
-          axis.title = element_text(size=12),
+          axis.text = element_text(size=9),
+          axis.title = element_text(size=10),
           axis.line = element_line(color="black", linewidth = 0.1),
           panel.border = element_rect(color="black"),
           plot.caption = element_text(hjust = 0),
-          #legend.position = c(-0.0,.8),
           legend.position = "bottom",
-          legend.title = element_text(size=12),
+          legend.title = element_text(size=10),
           legend.title.position = "top",
-          legend.text = element_text(size=10),
-          legend.background = element_rect(fill="white")#,plot.margin = unit(c(0,3,0,0), "cm")
-    ) +
-    labs(x = "\nReturn frequency", y = "Self-sufficiency level (%)\n", 
+          legend.text = element_text(size=9),
+          legend.background = element_rect(fill="white")) +
+    labs(x = "\nYears with intercopping", y = "Self-sufficiency level (%)\n", 
          caption = "Note: partial land equivalent ratio\nfor maize fixed at 0.79"),
   
-  # > b. Maize
-  ggplot(tab_p[which(tab_p$crop!="a. Soybean"),], aes(x = freq_crop_lab, y = perc_eu_supply)) +
+  # > MAIZE
+  ggplot(tab_p[which(tab_p$crop!="a."),], aes(x = freq_crop_lab, y = perc_eu_supply)) +
     # refs
     geom_hline(yintercept = c(25,50,75,100,125,150), 
-               linetype=2, 
+               linetype=2, lwd=0.5,
                color = "grey90") +
-    geom_path(aes(color=as.factor(pLER), group=interaction(crop,pLER)), 
-              linewidth=1) +
-    geom_point(aes(color=as.factor(pLER), shape=as.factor(pLER_lab)),
+    geom_path(aes(color=as.factor(pLER),
+                  lty = as.factor(pLER_lab),
+                  group=interaction(crop,pLER)), 
+              linewidth=0.75) +
+    geom_point(aes(color=as.factor(pLER), shape=as.factor(pLER)),
                size=2) +
     # current level of self-sufficiency 
     geom_hline(yintercept = 81, color='black', lty=2, linewidth=0.5) +
     annotate("text", x = 6, y = 69.5, hjust=1, 
              label = "Current level\n in the EU: 81%", 
              color="black", fontface = 'italic') +
-    scale_color_manual(values = viridis::mako(7, direction = -1)[2:7]) +
-    scale_shape_manual(values=c(3,15)) +
-    scale_y_continuous(breaks = c(25,50,75,100,125,150), limits = c(10,166)) +
+    scale_color_manual(values = viridis::magma(13, direction = -1)[8:13]) +
+    scale_linetype(guide = guide_none()) +
+    scale_y_continuous(breaks = c(25,50,75,100,125,150), 
+                       limits = c(10,166)) +
     guides(color = guide_legend(title = "\nPartial land equivalent ratio for maize:", ncol=3),
            shape = guide_none()) +
     facet_wrap(.~crop)+
-    theme_cowplot() +
+    theme_cowplot(font_size = 10) +
     theme(strip.text.y.left = element_text(angle=0, size=13, face = "bold"),
-          strip.text.x = element_text(size=13, face = "bold", hjust = 0),
+          strip.text.x = element_text(size=10, face = "bold", hjust = 0),
           strip.background = element_blank(),
-          axis.text.x = element_text(size=12, angle=45, 
-                                     vjust = 0.85, hjust = 0.9),
+          axis.text.x = element_text(size=9),
           axis.text.y = element_blank(),
-          axis.title.x = element_text(size=12),
+          axis.title.x = element_text(size=10),
           axis.title.y = element_blank(),
           axis.line = element_line(color="black", linewidth = 0.1),
           panel.border = element_rect(color="black"),
           plot.caption = element_text(hjust = 0),
-          #legend.position = c(-0.0,.8),
           legend.position = "bottom",
-          legend.title = element_text(size=12),
+          legend.title = element_text(size=10),
           legend.title.position = "top",
-          legend.text = element_text(size=10),
-          legend.background = element_rect(fill="white")#,plot.margin = unit(c(0,3,0,0), "cm")
+          legend.text = element_text(size=9),
+          legend.background = element_rect(fill="white")
     ) +
-    labs(x = "\nReturn frequency", y = "Self-sufficiency level (%)\n", 
+    labs(x = "\nYears with intercopping", y = "Self-sufficiency level (%)\n", 
          caption = "Note: partial land equivalent ratio\nfor soybean fixed at 0.56"),
   nrow=1, rel_widths = c(0.55, 0.45)
 )
 
 
-ggsave(filename = "D:/Mes Donnees/POSTDOC INRAE/PAPERS/02_PNAS/02_Figures/02_selfsufficiency_perc_v2_maize.png",
-       #filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/02_selfsufficiency_perc_v2_maize.png", 
-       width=22, height=18, bg="white", units = "cm", dpi=300)
+ggsave(filename = paste0(path_project, "FIGURES/Figure3.pdf"),
+       width=18, height=18, bg="white", units = "cm", dpi=300)
 
 # --------------------------
 # Figure 4. Results' sensitivity according pLERs and frequency in crop sequences
