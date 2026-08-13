@@ -1,0 +1,235 @@
+
+
+# -------------------------
+# PC
+path_alloc <- "C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/"
+
+# CIRAD
+path_alloc <- "D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/"
+
+# -------------------------
+# > sensitivity analysis with different yield threshold 
+
+# > Soybean allocations based on yields projeted from various models 
+load(paste0(path_alloc, "sensi/sensi_1.rda"))
+sensi_1 <- sensi_allocations ; rm(sensi_allocations)
+
+load(paste0(path_alloc, "sensi/sensi_2_1.rda"))
+sensi_2_1 <- sensi_allocations ; rm(sensi_allocations)
+
+load(paste0(path_alloc, "sensi/sensi_2_2.rda"))
+sensi_2_2 <- sensi_allocations ; rm(sensi_allocations)
+
+# > Allocations and area requierements
+alloc_sensi_1 <- list("Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU)"          = allocations,
+                      "Areas with soybean mean yield equal or higher than 2.6 t.ha-1 (EU)"          = sensi_1,
+                      "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU extended)" = sensi_2_1,
+                      "Areas with soybean mean yield equal or higher than 2.6 t.ha-1 (EU extended)" = sensi_2_2)
+
+# > Shapping allocations results
+# Allocations
+sensi_1_data_res <- format_alloc(results_allocations =  alloc_sensi_1 %>% 
+                                   map_dfr(., ~{ 
+                                     
+                                     map_dfr(.x, ~{ .x$data_res }, .id="scenario")
+                                     
+                                   }, .id="sensi_set")) %>% 
+  # > Set of sensitivity analyses
+  mutate(sensi_set = recode(sensi_set, 
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 2.6 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                            "Areas with soybean mean yield equal or higher than 2.6 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU extended)" )) %>%
+  mutate(sensi_set = factor(sensi_set, levels=c("Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                                                "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU extended)" )))
+
+# Surface required to cover different shares of 
+#    EU's consumption of soybean 
+sensi_2_res1 <- format_alloc(results_allocations =  alloc_sensi_1 %>% 
+                               map_dfr(., ~{ 
+                                 
+                                 map_dfr(.x, ~{ .x$res1 }, .id="scenario")
+                                 
+                               }, .id="sensi_set")) %>%
+  # > Set of sensitivity analyses
+  mutate(sensi_set_lab = recode(sensi_set, 
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 2.6 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                            "Areas with soybean mean yield equal or higher than 2.6 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU extended)" )) %>%
+  mutate(sensi_set_lab = factor(sensi_set_lab, levels=c("Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                                                "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU extended)" )))
+
+# Surface required to produce the same production (maize+soybean)
+#    as intercropping 
+sensi_2_res3 <- format_alloc(results_allocations =  alloc_sensi_1 %>% 
+                               map_dfr(., ~{ 
+                                 
+                                 map_dfr(.x, ~{ .x$res3 }, .id="scenario")
+                                 
+                               }, .id="sensi_set")) %>%
+  mutate(sensi_set = recode(sensi_set, 
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 2.6 t.ha-1 (EU)"          = "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU)"         ,
+                            "Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                            "Areas with soybean mean yield equal or higher than 2.6 t.ha-1 (EU extended)" = "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU extended)" )) %>%
+  mutate(sensi_set = factor(sensi_set, levels=c("Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU)"         ,
+                                                "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)",
+                                                "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU extended)" )))
+
+
+# -------------------------------------
+# Supplementary Figure 18.
+# Legend: Geographical allocation of maize-soybean intercropping in areas showing soybean productivity equal or higher than 1 t.ha-1 or 2.6 t.ha-1 (a) and soybean yields projected in corresponding sites (2000-2023) (b). 
+
+# Maize and soybean allocation in EU when grown in intercropping or as sole crops surface displayed per pixel (rather than presence/absence)
+tab_sensi_i <- sensi_1_data_res %>%
+  # > Keep the data for the figure (reference values)
+  filter(pLER_s == 0.56,
+         pLER_m == 0.79,          
+         freq_crop == 0.25, 
+         target_soybean_lab=="50%") %>% 
+  filter(pixel_reach_equal_prod==1) %>% 
+  # > pixel where maize as sole crop could be grown
+  mutate(pixel_maize_solecropping = if_else(pixel_solecropping == 0 & pixel_landsaving == 0, 1, 0)) %>%
+  # > keep useful columns 
+  dplyr::select(x, y, area, mean_Ya_1, mean_prod_1_i, target_soybean_lab, sensi_set, pixel_intercropping, "pixel_soybean_solecropping"="pixel_solecropping", pixel_maize_solecropping, pixel_landsaving) %>% 
+  gather(key = pixel_type, value = pixel_color, starts_with("pixel_")) %>%
+  mutate(Crop_Design_lab = case_when(
+    pixel_type == "pixel_intercropping"         ~ "Maize-soybean intercropping", 
+    pixel_type == "pixel_soybean_solecropping"  ~ "Soybean as sole crop", 
+    pixel_type == "pixel_maize_solecropping"    ~ "Maize as sole crop", 
+    pixel_type == "pixel_landsaving"            ~ "Land saved by intercropping")) %>% 
+  mutate(Crop_Design_lab = factor(Crop_Design_lab, levels = c("Maize-soybean intercropping",
+                                                              "Soybean as sole crop", 
+                                                              "Maize as sole crop", 
+                                                              "Land saved by intercropping"))) %>%
+  mutate(Crop_Design_lab2 = if_else(Crop_Design_lab == "Maize-soybean intercropping", "Intercropping", "Sole crops")) %>% 
+  mutate(target_soybean_lab = paste0("Soybean self-sufficiency level: ", target_soybean_lab)) %>% 
+  filter(pixel_color==1)
+
+sp18 <- plot_grid(
+  # > Intercropping
+  ggplot() +
+    geom_sf(data=eu27_ext, fill="grey35", color="transparent") +
+    geom_tile(data = tab_sensi_i %>% 
+                filter(pixel_type == "pixel_intercropping",
+                       sensi_set %in% c("Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)",
+                                        "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU)")) %>%
+                mutate(sensi_set = recode(sensi_set, 
+                                          "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"="1.0 t.ha-1",
+                                          "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU)"="2.6 t.ha-1")), 
+              aes(x=x, y=y, fill = (pixel_color*area)/10^3)) +
+    geom_sf(data = eu27, color="grey94", fill="transparent") +
+    scale_fill_gradientn(colours = c("white", "#0D0887FF"), 
+                         guide=guide_colorbar(title = "Area (1000 ha)", 
+                                              barwidth=0.5, barheight=8)) +
+    theme_cowplot() +
+    coord_sf(xlim = c(-11,50), ylim =c(33,70), expand=F) +
+    theme(strip.background = element_rect(fill="transparent", color="transparent"),
+          strip.text = element_text(face = "bold", size=11),
+          axis.title = element_blank(),
+          axis.text = element_text(size = 5),
+          title = element_text(size=10, hjust=0),
+          panel.border = element_rect(color="black")) +
+    facet_grid(. ~ sensi_set) +
+    ggtitle("                                            Mean yield equal or higher than"),
+  # > Sole soybean
+  ggplot() +
+    geom_sf(data=eu27_ext, fill="grey35", color="transparent") +
+    geom_tile(data = tab_sensi_i %>% filter(pixel_type == "pixel_intercropping",
+                                            sensi_set %in% c("Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)",
+                                                             "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU)")) %>%
+                mutate(sensi_set = recode(sensi_set, 
+                                          "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"="1.0 t.ha-1",
+                                          "Mean yield\nequal or higher\nthan 2.6 t.ha-1\n(EU)"="2.6 t.ha-1")), 
+              aes(x=x, y=y, fill = (pixel_color*mean_Ya_1))) +
+    geom_sf(data = eu27, color="grey94", fill="transparent") +
+    scale_fill_viridis_c(direction=-1, guide=guide_colorbar("Soybean yield (t)", 
+                                                            barwidth=0.5, barheight=8),
+                         option = "magma") +
+    ggtitle("                                            Mean yield equal or higher than") +
+    theme_cowplot() +
+    coord_sf(xlim = c(-11,50), ylim =c(33,70), expand=F) +
+    theme(strip.background = element_rect(fill="transparent", color="transparent"),
+          strip.text = element_text(face = "bold", size=11),
+          axis.title = element_blank(),
+          axis.text = element_text(size = 5),
+          title = element_text(size=10, hjust = 0.5),
+          panel.border = element_rect(color="black")) +
+    facet_grid(. ~ sensi_set),
+  ncol=1, align="hv", axis="tbrl", labels=c("a.", "b.")
+)
+
+ggsave(sp18,
+       filename = paste0(path_project, "/Sup_Fig18_map_sensi_min_yield.png"),
+       width=8, height=8, bg="white", dpi=300)
+
+
+# -------------------------------------
+
+
+# -------------------------------------
+
+# Supplementary Figure 20. 
+# Legend: Geographical allocation of maize-soybean intercropping in the European Union exclusively (EU) or extended to neighboring countries (EU extended) (a) and soybean yields projected in corresponding sites (2000-2023) (b). 
+
+sp20 <- plot_grid(
+  # > Intercropping
+  ggplot() +
+    geom_sf(data=eu27_ext, fill="grey35", color="transparent") +
+    geom_tile(data = tab_sensi_i %>% 
+                filter(pixel_type == "pixel_intercropping",
+                       sensi_set %in% c("Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)",
+                                        "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)")) %>%
+                mutate(sensi_set = recode(sensi_set, 
+                                          "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"="EU",
+                                          "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)"="EU extended")), 
+              aes(x=x, y=y, fill = (pixel_color*area)/10^3)) +
+    geom_sf(data = eu27_ext, color="grey94", fill="transparent") +
+    scale_fill_gradientn(colours = c("white", "#0D0887FF"), 
+                         guide=guide_colorbar(title = "Area (1000 ha)", 
+                                              barwidth=0.5, barheight=8)) +
+    theme_cowplot() +
+    coord_sf(xlim = c(-11,50), ylim =c(33,70), expand=F) +
+    theme(strip.background = element_rect(fill="transparent", color="transparent"),
+          strip.text = element_text(face = "bold", size=11),
+          axis.title = element_blank(),
+          axis.text = element_text(size = 5),
+          panel.border = element_rect(color="black")) +
+    facet_grid(. ~ sensi_set),
+  # > Sole soybean
+  ggplot() +
+    geom_sf(data=eu27_ext, fill="grey35", color="transparent") +
+    geom_tile(data = tab_sensi_i %>% filter(pixel_type == "pixel_intercropping",
+                                            sensi_set %in% c("Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)",
+                                                             "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)")) %>%
+                mutate(sensi_set = recode(sensi_set, 
+                                          "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU)"="EU",
+                                          "Mean yield\nequal or higher\nthan 1.0 t.ha-1\n(EU extended)"="EU extended")), 
+              aes(x=x, y=y, fill = (pixel_color*mean_Ya_1))) +
+    geom_sf(data = eu27, color="grey94", fill="transparent") +
+    scale_fill_viridis_c(direction=-1, guide=guide_colorbar("Soybean yield (t)", 
+                                                            barwidth=0.5, barheight=8),
+                         option = "magma") +
+    theme_cowplot() +
+    coord_sf(xlim = c(-11,50), ylim =c(33,70), expand=F) +
+    theme(strip.background = element_rect(fill="transparent", color="transparent"),
+          strip.text = element_text(face = "bold", size=11),
+          axis.title = element_blank(),
+          axis.text = element_text(size = 5),
+          panel.border = element_rect(color="black")) +
+    facet_grid(. ~ sensi_set),
+  ncol=1, align="hv", axis="tbrl", labels=c("a.", "b.")
+)
+
+ggsave(sp20,
+       filename = paste0(path_project, "/Sup_Fig20_map_sensi_eu_ext.png"),
+       width=8, height=8, bg="white", dpi=300)
+
+# -------------------------------------
