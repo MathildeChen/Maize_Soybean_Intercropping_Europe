@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------------
 #
-#       04 - Graphics and tables
-#       Author: M. Chen, Inrae, 2024
+#       05 - Script to produce main figures and tables
+#       Author: M. Chen, Cirad, 2024-2026
 #         
 # -------------------------------------------------------------------------
 
@@ -15,11 +15,8 @@ library(cowplot)
 library(wesanderson)
 library(metR)
 
-# > Color palettes
-# > gradient blue - yellow - red
-pal <- wes_palette("Zissou1", 6, type="continuous")
-
-# > countries maps
+# ----------------------------------------
+# Countries maps (data from Natural Earth public dataset)
 world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
 europe <- rnaturalearth::ne_countries(continent = "europe", scale = "medium", returnclass = "sf")
 eu27 <- rnaturalearth::ne_countries(country = c('Finland', 'Sweden', 'Estonia', 'Latvia', 'Denmark', 'Lithuania', 
@@ -52,33 +49,16 @@ ocean <- ne_download(
 
 # ----------------------------------------
 # Functions 
-
-# > Function for allocation
-#source("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_0_Function_for_allocation_2.R")
-
-# > Get density of points in 2 dimensions.
-# @param x A numeric vector.
-# @param y A numeric vector.
-# @param n Create a square n by n grid to compute density.
-# @return The density within each square.
-get_density <- function(x, y, ...) {
-  dens <- MASS::kde2d(x, y, ...)
-  ix <- findInterval(x, dens$x)
-  iy <- findInterval(y, dens$y)
-  ii <- cbind(ix, iy)
-  return(dens$z[ii])
-} 
-
-# > Home-made function to format correctly the results from allocation
+# > Home-made function to correctly format the results from allocations scenarios 
+#   (the function is provided in the "00_0_Function_for_allocation.R" script)
 format_alloc <- function(results_allocations)
 {
-  
   formatted_result <- results_allocations %>% 
     # format
     separate(col = "scenario", into = c("pLER_s", "pLER_m", "freq_crop", "target_soybean", "max_surf"), sep = "_", remove = F) %>% 
-    mutate(pLER_s    = as.numeric(as.character(pLER_s)),
-           pLER_m    = as.numeric(as.character(pLER_m)),
-           freq_crop = as.numeric(as.character(freq_crop)),
+    mutate(pLER_s         = as.numeric(as.character(pLER_s)),
+           pLER_m         = as.numeric(as.character(pLER_m)),
+           freq_crop      = as.numeric(as.character(freq_crop)),
            target_soybean = as.numeric(as.character(target_soybean))/10^6,
            max_surf       = as.numeric(as.character(max_surf))/10^6) %>% 
     ungroup() %>%
@@ -86,21 +66,10 @@ format_alloc <- function(results_allocations)
     # > pLERS
     mutate(pLER_lab = paste0(pLER_s, " - ", pLER_m)) %>% 
     # > Crop frequencies
-    mutate(freq_crop_lab = recode(freq_crop, 
-                                  "0.14"="1 year in 7", 
-                                  "0.16"="1 year in 6", 
-                                  "0.20"="1 year in 5", 
-                                  "0.25"="1 year in 4", 
-                                  "0.33"="1 year in 3", 
-                                  "0.5"="1 year in 2"),
-           freq_crop_lab = factor(freq_crop_lab, levels = c("1 year in 7", "1 year in 6", "1 year in 5", 
-                                                            "1 year in 4", "1 year in 3", "1 year in 2"))) %>% 
+    mutate(freq_crop_lab = recode(freq_crop, "0.14" = "1 year in 7", "0.16" = "1 year in 6", "0.20" = "1 year in 5", "0.25" = "1 year in 4", "0.33" = "1 year in 3", "0.5"  = "1 year in 2"),
+           freq_crop_lab = factor(freq_crop_lab, levels = c("1 year in 7", "1 year in 6", "1 year in 5", "1 year in 4", "1 year in 3", "1 year in 2"))) %>% 
     # > Production target
-    mutate(target_soybean_lab = recode(target_soybean, 
-                                       "9.075"="25%", 
-                                       "18.150"="50%", 
-                                       "27.225"="75%", 
-                                       "36.300"="100%"),
+    mutate(target_soybean_lab = recode(target_soybean, "9.075"  = "25%", "18.150" = "50%", "27.225" = "75%", "36.300" = "100%"),
            target_soybean_lab = factor(target_soybean_lab, c("25%", "50%", "75%", "100%"))) %>% 
     # > Maximum surface allocated
     mutate(max_surf_lab = "25% EU cropland area")
@@ -111,31 +80,19 @@ format_alloc <- function(results_allocations)
 
 # ----------------------------------------
 # Data
+# // update based on your architecture \\
+path_project <- "..."
 
-# PC
 # > Predicted yields - Europe
-load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_preds/04_EU/Ya_pred_eu_2000_2023.rda")
-# > EU coordinates
-load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_dat_coords_EU.rda")
-# > MAIN ANALYSIS : Results of simulations
-#   of soybean and maize allocations in Europe
-#   in EU27, on pixels with mean yield > 1 t/ha
-#   (previously computed using the 03_Allocation_europe_full_simulations.R script)
-allocations <- CCMHr::loadRDa("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/allocations_soybean_maize_eu_restricted_min_rdt_check.rda")
-#load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/08_allocations/allocations_with_max_surf/allocations_soybean_maize_eu_restricted.rda")
+load(paste0(path_project, "/00_DATA/Ya_pred_eu_2000_2023.rda"))
 
-# CIRAD
-# > Predicted yields - Europe
-load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/Ya_pred_eu_2000_2023.rda")
-# > EU coordinates
-load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/00_dat_coords_EU.rda")
-# > MAIN ANALYSIS : Results of simulations
-load("D:/Mes Donnees/POSTDOC INRAE/ANALYSES/02_Maize_Soybean_intercropping_Europe/00_DATA/allocations_soybean_maize_eu_restricted_min_rdt_check.rda")
+# > Coordinates of sites in the EU
+load(paste0(path_project, "/00_DATA/00_dat_coords_EU.rda"))
+
+# > Results of maize-soybean intercropping and sole cropping allocations (from the "03_1_Allocation_europe_main_analysis.R")
+load(paste0(path_project, "00_DATA/allocations_soybean_maize_eu_restricted_min_rdt_check.rda"))
+# change the name of the object
 allocations <- sensi_allocations ; rm(sensi_allocations)
-
-# ----------------------------------------
-# ------------- MAIN ANALYSIS ------------ 
-# ----------------------------------------
 
 # > Shapping allocations results
 # 1. Allocation by pixel 
@@ -149,512 +106,221 @@ res2 <- format_alloc(results_allocations =  allocations %>% map_dfr(., ~{.x$res1
 #    as intercropping 
 res3 <- format_alloc(results_allocations =  allocations %>% map_dfr(., ~{.x$res3}, .id="scenario"))
 
-# 4. Performance of intercropping vs sole crops 
-res4 <- format_alloc(results_allocations =  allocations %>% map_dfr(., ~{.x$res2}, .id="scenario"))
-
 # ----------------------------------------
-# ----------------------------------------
-# Main figures 
+# ---------------------------------------- 
+# Figure 1. 
+# Legend: Soybean (a) and maize (b) rainfed yield projections (2000-2023 averages), and maize/soybean ratio (c) in the European Union. 
+# Subtitle: Projections were obtained from random forest models based on climate inputs (derived from the ERA5-land dataset) covering the crop growing seasons (April-November for soybean and April-December for maize) and irrigated fraction (estimated by SPAM2010, and set to zero for the yield projections). Climate inputs included monthly minimum and maximum temperatures, total precipitation, solar radiation, reference evapotranspiration, and vapor pressure deficit. For each climate variable, the first two scores derived from a principal component analysis were used as climate predictors in the model. For panels (a) and (b), density graphics on the top show the variability in average projected yields, with 25th, 50th (median), and 75th quantiles indicated as vertical yellow, red, and black lines, respectively. Below, the maps represent the spatial distribution of projected average yields, with darker shades indicating regions with higher mean yields, whereas lighter shades representing lower yields (e.g., areas with average crop yield ~ 0 t.ha-1 are displayed in light grey). Regions corresponding to the 25th, 50th (median), and 75th yield quantiles are further delineated by yellow, red, and black contours, respectively. For panel (c), darker shades indicate high ratio between maize and soybean average projected yields, for example in the areas close to the Alps characterized by low soybean yields (i.e., <1 t.ha-1) but moderate-to-high maize yields (i.e., >6 t.ha-1). Base map based on Natural Earth data, created using the R package rnaturalearth.
 
-# --------------------------
-# Figure 1. Yield projections in Europe 
+# Define colors palette 
+density_pal <- c("#fcfdbf", "#b73779", "#000004")
 
-# Breaks for geom_contour_fill, geom_contour, geom_text_contour 
+# SOYBEAN 
+# 1. Distribution of projected yields in the EU
+quantiles_soybean <- quantile(mean_Ya_pred_eu[which(mean_Ya_pred_eu$crop=="a."),]$mean_Ya_pred, probs=c(0.25,0.5,0.75)) ; quantiles_soybean
+#      25%      50%      75% 
+# 1.032215 2.080199 2.569741 
+quantiles_crop <- quantiles_soybean
+quantiles_crop_lab <- paste(c("25th\nquantile:\n", "Median:\n", "75th quantile:\n"), format(round(quantiles_crop, digits = 1), nsmall = 1))
+
+pa1 <- mean_Ya_pred_eu %>% 
+  filter(crop=="a.") %>% 
+  ggplot(.) +
+  geom_density(aes(x=mean_Ya_pred)) +
+  geom_linerange(ymin = 0, ymax = 0.45, x = quantiles_crop[1], color = density_pal[1], linewidth = 0.75) + 
+  geom_text(x = quantiles_crop[1], y = 0.5, label = quantiles_crop_lab[1], check_overlap = T, hjust = 0.9, vjust = 0, size=2.5) +
+  geom_linerange(ymin = 0, ymax = 0.55, x = quantiles_crop[2], color = density_pal[2], linewidth = 0.75) +
+  geom_text(x = quantiles_crop[2], y = 0.575, label = quantiles_crop_lab[2], check_overlap = T, hjust = 0.5, vjust = 0, size=2.5) +
+  geom_linerange(ymin = 0, ymax = 0.55, x = quantiles_crop[3], color = density_pal[3], linewidth = 0.75) + 
+  geom_text(x = quantiles_crop[3], y = 0.575, label = quantiles_crop_lab[3], check_overlap = T, hjust = 0, vjust = 0, size=2.5) +
+  #annotate(geom = "text", x = quantiles_soybean, y = 0.575, label = quantiles_soybean_lab, vjust=0) +
+  coord_cartesian(ylim = c(0, 0.7)) +
+  scale_y_continuous(breaks = seq(0,0.5,by=0.1)) + 
+  theme_cowplot(font_size = 10) +
+  theme(plot.margin = margin(1, 0, 0, 0)) +
+  labs(x = expression("Mean projected yield t." ~ ha^-1), y = "Density"); pa1
+
+# 2. Spatial variability of yields 
 breaks_plot <- c(0, seq(0.5, 3.5, by=0.5), seq(4, 10, by=1))
-breaks_labels <- seq(0,10, by=1)
+breaks_labels <- quantile(mean_Ya_pred_eu[which(mean_Ya_pred_eu$crop=="a."),]$mean_Ya_pred, probs=c(0.25,0.5,0.75))
 
-# Map of average yield predictions in Europe
-mean_Ya_pred_eu <- Ya_pred_eu %>% 
-  filter(model=="pca.m.2", id_eu27==1) %>%
-  # > label according to crops
-  mutate(crop = if_else(crop=="maize", "b.", "a.")) %>% 
-  # > long format 
-  gather(key=year, value=Ya_pred, starts_with("X2")) %>% 
-  # > for each pixel, recompute yields (in t/ha)
-  group_by(crop, x, y, cropland_area_ha) %>% 
-  mutate(Ya_pred_t_ha = Ya_pred/cropland_area_ha) %>%
-  summarise(mean_Ya_pred = mean(Ya_pred, na.rm=T)) %>%
-  mutate(mean_Ya_pred = ifelse(is.na(mean_Ya_pred)==T, 0, mean_Ya_pred))
-
-# > plot
-p1 <- ggplot() + 
+pa2 <- mean_Ya_pred_eu[which(mean_Ya_pred_eu$crop == "a."),] %>% 
+  ggplot(data=.) + 
   geom_sf(data=eu27, fill="grey94") +
-  geom_contour_fill(data=mean_Ya_pred_eu,
-                    aes(x=x, y=y, z=mean_Ya_pred), 
+  geom_contour_fill(aes(x=x, y=y, z=mean_Ya_pred), 
                     breaks = breaks_plot,
                     na.fill = T, 
                     global.breaks = F,
                     clip = eu27) +
   geom_sf(data=eu27_ext, fill="transparent") +
-  geom_contour(aes(x=x, y=y, z=mean_Ya_pred), 
-               color = "white", 
-               linewidth = 0.1,
-               breaks = breaks_plot) +
-  geom_text_contour(aes(x=x, y=y, z=mean_Ya_pred), 
-                    color="black",
-                    size=3, 
-                    breaks = breaks_labels) +
-  facet_grid(.~crop) + 
-  theme_map() + 
+  geom_contour(
+    data = data_for_plot,
+    aes(x, y, z = mean_Ya_pred),
+    breaks = quantiles_crop[1],
+    colour = density_pal[1]
+  ) +
+  geom_contour(
+    data = data_for_plot,
+    aes(x, y, z = mean_Ya_pred),
+    breaks = quantiles_crop[2],
+    colour = density_pal[2]
+  ) +
+  geom_contour(
+    data = data_for_plot,
+    aes(x, y, z = mean_Ya_pred),
+    breaks = quantiles_crop[3],
+    colour = density_pal[3]
+  ) +
+  theme_cowplot(font_size = 10) + 
   lims(x = c(-11,35), y=c(33,71)) + 
-  #lims(x = c(-10,35), y=c(33,70)) + 
   theme(legend.position = "bottom",, 
-        legend.title = element_text(size=12), 
+        legend.title = element_text(size=10), 
         legend.text = element_text(size=10),
-        strip.text = element_text(face = "bold", hjust = 0.1, size=15)) +
+        axis.title = element_blank(), 
+        axis.text = element_text(size=6),
+        plot.margin = margin(0, 0, 0, 0)) +
   scale_fill_gradientn(colours = c("transparent", 
-                                   #viridis::plasma(n=100)[50:100], viridis::viridis(direction=-1, n=100)[1:75]),
-                                   viridis::viridis(direction=-1, n=100)),
-                       breaks = breaks_labels, 
-                       labels = breaks_labels,
-                       guide = guide_colorbar(barwidth = 20, barheight = 0.5, title.position = "top", title = expression("Mean yield t " ~ ha^-1))) ; p1
+                                   rev(grey.colors(100))),
+                       breaks = seq(0, 4.5, by = 1), 
+                       labels = seq(0, 4.5, by = 1),
+                       guide = guide_colorbar(barwidth = 6, barheight = 0.5, 
+                                              title.position = "top", 
+                                              title = expression("Mean projected yield t." ~ ha^-1))) ; pa2
 
-ggsave(p1, 
-       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/01_pred_maps.png", 
-       height=18, width=22, bg="white", units = "cm", dpi = 300)
-
-ggsave(p1, 
-       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/01_pred_maps.pdf", 
-       height=18, width=22, bg="white", units = "cm", dpi = 300)
-
-# Yield distribution 
-mean_Ya_pred_eu %>% 
-  mutate(crop=recode(crop,"a."="soybean","b."="maize")) %>% 
-  spread(key=crop, value=mean_Ya_pred) %>%
-  ungroup() %>% dplyr::select(-x,-y) %>% 
-  summary(.)
-#     maize          soybean     
-#Min.   :0.223   Min.   :0.113  
-#1st Qu.:4.305   1st Qu.:1.032  
-#Median :6.220   Median :2.080  
-#Mean   :5.261   Mean   :1.803  
-#3rd Qu.:6.986   3rd Qu.:2.570  
-#Max.   :9.002   Max.   :4.164
-
-quantiles_soybean <- quantile(mean_Ya_pred_eu[which(mean_Ya_pred_eu$crop=="a."),]$mean_Ya_pred, probs=c(0.25,0.5,0.75)) ; quantiles_soybean
-#      25%      50%      75% 
-# 1.032215 2.080199 2.569741 
+# MAIZE
+# 1. Distributions
 quantiles_maize <- quantile(mean_Ya_pred_eu[which(mean_Ya_pred_eu$crop=="b."),]$mean_Ya_pred, probs=c(0.25,0.5,0.75)) ; quantiles_maize
 #      25%      50%      75% 
 # 4.304674 6.220117 6.986286
+quantiles_crop <- quantiles_maize
+quantiles_crop_lab <- paste(c("25th\nquantile:\n", "Median:\n", "75th\nquantile:\n"), format(round(quantiles_crop, digits = 1), nsmall = 1))
 
-# Area with given level of productivity for each crop
-mean_Ya_pred_eu_cat <- mean_Ya_pred_eu %>% 
-  mutate(crop=recode(crop,"a."="soybean","b."="maize")) %>% 
+pb1 <- mean_Ya_pred_eu %>% 
+  filter(crop=="b.") %>% 
+  ggplot(.) +
+  geom_density(aes(x=mean_Ya_pred)) +
+  geom_linerange(ymin = 0, ymax = 0.35, x = quantiles_crop[1], color = density_pal[1], linewidth = 0.75) + 
+  geom_text(x = quantiles_crop[1], y = 0.375, label = quantiles_crop_lab[1], check_overlap = T, hjust = 0.9, vjust = 0, size=2.5) +
+  geom_linerange(ymin = 0, ymax = 0.35, x = quantiles_crop[2], color = density_pal[2], linewidth = 0.75) +
+  geom_text(x = quantiles_crop[2], y = 0.375, label = quantiles_crop_lab[2], check_overlap = T, hjust = 0.9, vjust = 0, size=2.5) +
+  geom_linerange(ymin = 0, ymax = 0.45, x = quantiles_crop[3], color = density_pal[3], linewidth = 0.75) + 
+  geom_text(x = quantiles_crop[3], y = 0.475, label = quantiles_crop_lab[3], check_overlap = T, hjust = 0, vjust = 0, size=2.5) +
+  #annotate(geom = "text", x = quantiles_soybean, y = 0.575, label = quantiles_soybean_lab, vjust=0) +
+  coord_cartesian(ylim = c(0, 0.7)) +
+  scale_y_continuous(breaks = seq(0,0.5,by=0.1)) + 
+  theme_cowplot(font_size = 10) +
+  theme(plot.margin = margin(1, 0, 0, 0)) +
+  labs(x = expression("Mean projected yield t." ~ ha^-1), y = "Density"); pb1
+
+# 2. Spatial variability
+pb2 <- mean_Ya_pred_eu[which(mean_Ya_pred_eu$crop == "b."),] %>% 
+  ggplot(data=.) + 
+  geom_sf(data=eu27, fill="grey94") +
+  geom_contour_fill(aes(x=x, y=y, z=mean_Ya_pred), 
+                    breaks = breaks_plot,
+                    na.fill = T, 
+                    global.breaks = F,
+                    clip = eu27) +
+  geom_sf(data=eu27_ext, fill="transparent") +
+  geom_contour(
+    data = data_for_plot,
+    aes(x, y, z = mean_Ya_pred),
+    breaks = quantiles_crop[1],
+    colour = density_pal[1]
+  ) +
+  geom_contour(
+    data = data_for_plot,
+    aes(x, y, z = mean_Ya_pred),
+    breaks = quantiles_crop[2],
+    colour = density_pal[2]
+  ) +
+  geom_contour(
+    data = data_for_plot,
+    aes(x, y, z = mean_Ya_pred),
+    breaks = quantiles_crop[3],
+    colour = density_pal[3]
+  ) +
+  theme_cowplot(font_size = 10) + 
+  lims(x = c(-11,35), y=c(33,71)) + 
+  theme(legend.position = "bottom",, 
+        legend.title = element_text(size=10), 
+        legend.text = element_text(size=10),
+        axis.title = element_blank(), 
+        axis.text = element_text(size=6),
+        plot.margin = margin(0, 0, 0, 0)) +
+  scale_fill_gradientn(colours = c("transparent", 
+                                   rev(grey.colors(100))),
+                       breaks = seq(0, 8.5, by = 1), 
+                       labels = seq(0, 8.5, by = 1),
+                       guide = guide_colorbar(barwidth = 10, barheight = 0.5, 
+                                              title.position = "top", 
+                                              title = expression("Mean projected yield t." ~ ha^-1))) ; pb2
+
+
+# PROJECTED YIELD MAIZE / PROJECTED YIELD SOYBEAN RATIOS 
+# Spatial variability of yields ratios 
+breaks_plot_ratio <- c(0, seq(1, 8, by=0.5), 12)
+breaks_labels_ratio <- c(seq(0, 8, by=2), 12)
+
+p1c <- Ya_pred_eu %>% 
+  filter(id_eu27==1) %>%
+  # > long format 
+  gather(key=year, value=Ya_pred, starts_with("X2")) %>% 
+  # > for each pixel, recompute yields (in t/ha)
+  group_by(crop, x, y) %>% 
+  mutate(Ya_pred_t_ha = Ya_pred/cropland_area_ha) %>%
+  summarise(mean_Ya_pred = mean(Ya_pred, na.rm=T)) %>%
+  mutate(mean_Ya_pred = ifelse(is.na(mean_Ya_pred)==T, 0, mean_Ya_pred)) %>% 
   spread(crop, mean_Ya_pred) %>% 
-  # > soybean yield categories
-  mutate(mean_Ya_soybean_cat_1   = if_else(soybean >= quantiles_soybean[1], 1, 0),
-         mean_Ya_soybean_cat_2   = if_else(soybean >= quantiles_soybean[2], 1, 0),
-         mean_Ya_soybean_cat_3   = if_else(soybean >= quantiles_soybean[3], 1, 0)) %>% 
-  # > maize yield categories
-  mutate(mean_Ya_maize_cat_1   = if_else(maize >= quantiles_maize[1], 1, 0),
-         mean_Ya_maize_cat_2   = if_else(maize >= quantiles_maize[2], 1, 0),
-         mean_Ya_maize_cat_3   = if_else(maize >= quantiles_maize[3], 1, 0)) %>%
-  left_join(Ya_pred_eu %>% 
-              dplyr::select(x,y,cropland_area_ha) %>% 
-              distinct(), by=c("x","y"))
-
-# total per cat
-# > soybean
-mean_Ya_pred_eu_cat %>%
-  dplyr::select(-starts_with("mean_Ya_maize")) %>%
-  gather(key=mean_Ya_soybean_cat, value=soybean_value, starts_with("mean_Ya_soybean")) %>%
-  # > total area (106 Mha)
-  group_by(mean_Ya_soybean_cat) %>% 
-  mutate(total_cropland = sum(cropland_area_ha)) %>%
+  # > compute the ratio between maize yield and soybean yields
   ungroup() %>% 
-  filter(soybean_value==1) %>%
-  group_by(mean_Ya_soybean_cat, total_cropland) %>% 
-  reframe(n_pixel=n(),
-          cropland_area_sum = sum(cropland_area_ha)/10^6) %>% 
-  mutate(cropland_area_prop = 100*(cropland_area_sum/(total_cropland/10^6))) 
-#   mean_Ya_soybean_cat   total_cropland n_pixel cropland_area_sum cropland_area_prop
-# 1 mean_Ya_soybean_cat_1     105629027.    2024             103.                97.9
-# 2 mean_Ya_soybean_cat_2     105629027.    1350              81.8               77.5
-# 3 mean_Ya_soybean_cat_3     105629027.     675              36.2               34.3
+  mutate(ratio = case_when(
+    soybean < 0.5 & maize < 0.5 ~ 0,
+    #soybean < 1 & maize > 5 ~ 0, 
+    TRUE ~ maize/soybean)) %>% 
+  #mutate(ratio=maize/soybean) %>% 
+  mutate(crop="c.") %>%
+  # > plot
+  ggplot(.) + 
+  geom_sf(data=eu27, fill="grey94") +
+  geom_contour_fill(aes(x=x, y=y, z=ratio), 
+                    breaks = breaks_plot_ratio,
+                    na.fill = T, 
+                    global.breaks = F,
+                    clip = eu27) +
+  geom_sf(data=eu27_ext, fill="transparent") +
+  theme_cowplot(font_size = 10) + 
+  lims(x = c(-11,35), y=c(33,71)) + 
+  theme(legend.position = "bottom",, 
+        legend.title = element_text(size=10), 
+        legend.text = element_text(size=10),
+        axis.title = element_blank(), 
+        axis.text = element_text(size=6),
+        plot.margin = margin(0, 0, 0, 0)) +
+  scale_fill_gradientn(colours = c("transparent", viridis::inferno(direction=-1, n=100), "darkgrey"),
+                       breaks = breaks_labels_ratio, 
+                       labels = breaks_labels_ratio,
+                       guide = guide_colorbar(barwidth = 10, 
+                                              barheight = 0.5, 
+                                              title.position = "top", 
+                                              title = "Maize yield /Soybean yield ratio")) ; p1c
 
-# > maize
-mean_Ya_pred_eu_cat %>%
-  dplyr::select(-starts_with("mean_Ya_soybean")) %>%
-  gather(key=mean_Ya_maize_cat, value=maize_value, starts_with("mean_Ya_maize")) %>% 
-  # > total area (106 Mha)
-  group_by(mean_Ya_maize_cat) %>% 
-  mutate(total_cropland = sum(cropland_area_ha)) %>%
-  ungroup() %>% 
-  filter(maize_value==1) %>%
-  group_by(mean_Ya_maize_cat, total_cropland) %>% 
-  reframe(n_pixel=n(),
-          cropland_area_sum = sum(cropland_area_ha)/10^6) %>% 
-  mutate(cropland_area_prop = 100*(cropland_area_sum/(total_cropland/10^6))) 
-#   mean_Ya_maize_cat   total_cropland n_pixel cropland_area_sum cropland_area_prop
-# 1 mean_Ya_maize_cat_1     105629027.    2024              99.1               93.8
-# 2 mean_Ya_maize_cat_2     105629027.    1350              61.7               58.4
-# 3 mean_Ya_maize_cat_3     105629027.     675              26.7               25.3
 
-# cross tables
-mean_Ya_pred_eu_cat %>% 
-  gather(key=mean_Ya_soybean_cat, value=soybean_value, starts_with("mean_Ya_soybean"))%>%
-  gather(key=mean_Ya_maize_cat, value=maize_value, starts_with("mean_Ya_maize")) %>%
-  filter(soybean_value==1) %>% 
-  group_by(mean_Ya_soybean_cat, mean_Ya_maize_cat) %>% 
-  summarise(cropland_area_sum = sum(cropland_area_ha*(maize_value))/10^6) %>%
-  spread(key=mean_Ya_maize_cat, value=cropland_area_sum)
+# Wrap the 3 panels into 1 
+plot_grid(
+  plot_grid(pa1, pb1, ggplot() + theme_void() + theme(plot.margin = margin(1, 0, 0, 0)), 
+            nrow = 1, labels = c("a.", "b.", "c.")), 
+  plot_grid(pa2, pb2, p1c, nrow=1, align="hv"), 
+  nrow=2, rel_heights = c(0.3, 0.7))
 
-#   mean_Ya_soybean_cat   mean_Ya_maize_cat_1 mean_Ya_maize_cat_2 mean_Ya_maize_cat_3
-# 1 mean_Ya_soybean_cat_1                98.9                61.7                26.7
-# 2 mean_Ya_soybean_cat_2                80.8                56.1                25.6
-# 3 mean_Ya_soybean_cat_3                36.2                24.1                17.2
+# Save plot 
+ggsave(filename = paste0(path_project, "FIGURES/Figure1.pdf"), 
+       height=18, width=21, bg="white", units = "cm", dpi = 300)
+
 
 # -------------------------
-# Figure 2 - Area requirements to reach the same production
+# Table 1 - Area requirements to reach the same production
 # of maize and soybean in intercropping and sole cropping
-
-# > Max surface = 1/4 of EU27 cropland ~ 25 Mha
-num_eu_cropland25<-25
-
-# Maps - maize and soybean allocation in EU when grown in 
-# intercropping or as sole crops
-alloc_maps <- res1 %>% 
-  # > Keep the data for the figure (reference values)
-  filter(pLER_s == 0.56,
-         pLER_m == 0.79,          
-         freq_crop == 0.25) %>% 
-  split(.$target_soybean) %>% 
-  map(., ~{
-    
-    tab_i <- .x %>% 
-      filter(pixel_reach_equal_prod==1) %>% 
-      # > pixel where maize as sole crop could be grown
-      mutate(pixel_maize_solecropping = if_else(pixel_solecropping == 0 & pixel_landsaving == 0, 1, 0)) %>%
-      # > keep usefull columns 
-      dplyr::select(x, y, target_soybean_lab, pixel_intercropping, "pixel_soybean_solecropping"="pixel_solecropping", pixel_maize_solecropping, pixel_landsaving) %>% 
-      gather(key = pixel_type, value = pixel_color, starts_with("pixel_")) %>%
-      mutate(Crop_Design_lab = case_when(
-        pixel_type == "pixel_intercropping"         ~ "Int", 
-        pixel_type == "pixel_soybean_solecropping"  ~ "Soybean as SC", 
-        pixel_type == "pixel_maize_solecropping"    ~ "Maize as SC", 
-        pixel_type == "pixel_landsaving"            ~ "Additional area required as maize in SC\nto reach the same co-production as Int")) %>% 
-      mutate(Crop_Design_lab = factor(Crop_Design_lab, levels = c("Int", 
-                                                                  "Soybean as SC", 
-                                                                  "Maize as SC",
-                                                                  "Additional area required as maize in SC\nto reach the same co-production as Int"))) %>%
-      filter(Crop_Design_lab %in% c("Int", 
-                                    "Soybean as SC", 
-                                    "Maize as SC",
-                                    "Additional area required as maize in SC\nto reach the same co-production as Int")) %>% 
-      mutate(Crop_Design_lab2 = if_else(Crop_Design_lab == "Int", "Intercropping (Int)", "Sole crops (SC)")) %>% 
-      mutate(target_soybean_lab = paste0("Soybean\nself-sufficiency\nlevel: ", target_soybean_lab))
-    
-    # Maps surface
-    ggplot() +
-      #geom_text(data = tab_i, x = -5, y = 68, aes(label = surfaces_lab), size= 3) +
-      geom_sf(data=eu27, fill="grey94", color="transparent") +
-      geom_tile(data = tab_i, 
-                aes(x=x, 
-                    y=y, 
-                    fill=Crop_Design_lab, 
-                    alpha=as.factor(pixel_color))) +
-      scale_fill_manual(values = c("#3CBC75FF", "#2D718EFF", "#FDE725FF", "purple"), 
-                        guide=guide_legend("", nrow = 1, position = "bottom")) +
-      scale_alpha_manual(values = c(0,1), guide=guide_none()) +
-      geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) +
-      geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) +
-      geom_sf(data = europe, fill="transparent") +
-      theme_map() + 
-      theme(strip.text.y.left = element_text(angle=0, size=25),
-            strip.background = element_rect(fill="lightgrey", color="transparent"),
-            strip.text.x = element_text(size=25),
-            legend.text = element_text(size=25)) +
-      facet_grid(target_soybean_lab ~ Crop_Design_lab2, switch = "y") +
-      lims(x = c(-11,35), y=c(33,70)) 
-    
-  }) ; alloc_maps[[2]]
-
-
-# Maps - maize and soybean allocation in EU when grown in 
-# intercropping or as sole crops 
-# surface displayed per pixel (rather than presence/absence)
-alloc_maps_surf_pixel <- res1 %>%
-  # > Keep the data for the figure (reference values)
-  filter(pLER_s == 0.56,
-         pLER_m == 0.79,          
-         freq_crop == 0.25) %>% 
-  split(.$target_soybean_lab) %>% 
-  map(., ~{
-    
-    tab_i <- .x %>% 
-      filter(pixel_reach_equal_prod==1) %>% 
-      # > pixel where maize as sole crop could be grown
-      mutate(pixel_maize_solecropping = if_else(pixel_solecropping == 0 & pixel_landsaving == 0, 1, 0)) %>%
-      # > keep useful columns 
-      dplyr::select(x, y, area, target_soybean_lab, pixel_intercropping, "pixel_soybean_solecropping"="pixel_solecropping", pixel_maize_solecropping, pixel_landsaving) %>% 
-      gather(key = pixel_type, value = pixel_color, starts_with("pixel_")) %>%
-      mutate(Crop_Design_lab = case_when(
-        pixel_type == "pixel_intercropping"         ~ "Maize-soybean intercropping", 
-        pixel_type == "pixel_soybean_solecropping"  ~ "Soybean as sole crop", 
-        pixel_type == "pixel_maize_solecropping"    ~ "Maize as sole crop", 
-        pixel_type == "pixel_landsaving"            ~ "Land saved by intercropping")) %>% 
-      mutate(Crop_Design_lab = factor(Crop_Design_lab, levels = c("Maize-soybean intercropping",
-                                                                  "Soybean as sole crop", 
-                                                                  "Maize as sole crop", 
-                                                                  "Land saved by intercropping"))) %>%
-      mutate(Crop_Design_lab2 = if_else(Crop_Design_lab == "Maize-soybean intercropping", "Intercropping", "Sole crops")) %>% 
-      mutate(target_soybean_lab = paste0("Soybean self-sufficiency level: ", target_soybean_lab)) %>% 
-      filter(pixel_color==1)
-    
-    # Maps surface
-    p <- plot_grid(
-      # > Intercropping
-      ggplot() +
-        geom_sf(data=eu27, fill="grey35", color="transparent") +
-        geom_tile(data = tab_i %>% filter(pixel_type == "pixel_intercropping"), 
-                  aes(x=x, y=y, fill = pixel_color*area/10^3)) +
-        scale_fill_gradientn(colours = c("white", "#0D0887FF"), guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", barwidth=15, barheight=0.7), limits = c(0,180)) +
-        geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
-        theme_map() + 
-        theme(strip.background = element_rect(fill="lightgrey", color="transparent"),
-              strip.text.x = element_text(size=25),
-              legend.text = element_text(size=25),
-              legend.title = element_text(size=25),
-              legend.title.position = "top",
-              title = element_text(size=25)) +
-        facet_grid(. ~ Crop_Design_lab, switch = "y") +
-        lims(x = c(-11,35), y=c(33,70)) +
-        #ggtitle(paste0(unique(tab_i$target_soybean_lab))) +
-        ggtitle("a. Geographical allocation"),
-      # > Sole soybean
-      ggplot() +
-        geom_sf(data=eu27, fill="grey35", color="transparent") +
-        geom_tile(data = tab_i %>% filter(pixel_type == "pixel_soybean_solecropping"), 
-                  aes(x=x, y=y, fill = pixel_color*area/10^3)) +
-        scale_fill_gradientn(colours = c("white", "#8405A7FF"), guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", barwidth=15, barheight=0.7), limits = c(0,180)) +
-        geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
-        theme_map() + 
-        theme(strip.background = element_rect(fill="lightgrey", color="transparent"),
-              strip.text.x = element_text(size=25),
-              legend.text = element_text(size=25),
-              legend.title = element_text(size=25),
-              legend.title.position = "top") +
-        facet_grid(. ~ Crop_Design_lab, switch = "y") +
-        lims(x = c(-11,35), y=c(33,70)), 
-      # > Sole maize
-      ggplot() +
-        geom_sf(data=eu27, fill="grey35", color="transparent") +
-        geom_tile(data = tab_i %>% filter(pixel_type == "pixel_maize_solecropping"), 
-                  aes(x=x, y=y, fill = pixel_color*area/10^3)) +
-        scale_fill_gradientn(colours = c("white", "#DF6263FF"), guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", barwidth=15, barheight=0.7), limits = c(0,180)) +
-        geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
-        theme_map() + 
-        theme(strip.background = element_rect(fill="lightgrey", color="transparent"),
-              strip.text.x = element_text(size=25),
-              legend.text = element_text(size=25),
-              legend.title = element_text(size=25),
-              legend.title.position = "top") +
-        facet_grid(. ~ Crop_Design_lab, switch = "y") +
-        lims(x = c(-11,35), y=c(33,70)),
-      # > Land saving
-      ggplot() +
-        geom_sf(data=eu27, fill="grey35", color="transparent") +
-        geom_tile(data = tab_i %>% filter(pixel_type == "pixel_landsaving"), 
-                  aes(x=x, y=y, fill = pixel_color*area/10^3)) +
-        scale_fill_gradientn(colours = c("white", "#F0F921FF"), guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", barwidth=15, barheight=0.7), limits = c(0,180)) +
-        geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
-        theme_map() + 
-        theme(strip.background = element_rect(fill="lightgrey", color="transparent"),
-              strip.text.x = element_text(size=25),
-              legend.text = element_text(size=25),
-              legend.title = element_text(size=25), legend.title.position = "top") +
-        facet_grid(. ~ Crop_Design_lab, switch = "y") +
-        lims(x = c(-11,35), y=c(33,70)),
-      nrow=1, align="hv"
-      
-    ) 
-    
-  }) ; alloc_maps_surf_pixel[["50%"]]
-
-
-# Total surface 
-alloc_surf <- res3 %>%
-  filter(pLER_s == 0.56,
-         pLER_m == 0.79,          
-         #target_soybean %in% c(22.50, 33.75), 
-         freq_crop == 0.25) %>% 
-  split(.$target_soybean_lab) %>%
-  map(., ~{
-    
-    .x %>% 
-      # > keep only 1 line for intercropping (same surface for both crop)
-      mutate(to_keep = if_else(strategy=="intercrop" & crop =="crop 2", 0, 1)) %>% 
-      filter(to_keep == 1) %>% 
-      # > re-label crop and strategy
-      mutate(crop = if_else(strategy=="intercrop", "Maize-soybean intercropping", crop),
-             crop = recode(crop, "landsaving"="Land saved by intercropping", "crop 1"="Soybean as sole crop", "crop 2" = "Maize as sole crop")) %>% 
-      mutate(strategy = recode(strategy, "intercrop"="Int", "sole crop"="SC")) %>% 
-      ggplot(data=.) +
-      # > total surface covered by each strategy
-      geom_col(aes(x=strategy , y = total_surface/10^6, fill=crop),
-               col="transparent", width=0.75) +
-      # > total surface available for production (25% of European cropland)
-      geom_hline(yintercept=num_eu_cropland25, 
-                 color="black", linetype = 2, lwd=2) +
-      annotate("text", x = 2.7, y = num_eu_cropland25, 
-               label = "25% of\ncroplands\nin the EU", hjust=0, size=9,
-               color="black", fontface = 'italic') + 
-      coord_cartesian(clip = "off", xlim = c(1, 2)) + 
-      theme_cowplot() + 
-      theme(strip.background = element_blank(),
-            strip.text = element_blank(),
-            legend.position = "bottom",
-            legend.text = element_text(size=25),
-            panel.border = element_rect(color="black"),
-            title = element_text(size=25),
-            axis.text = element_text(size=25),
-            axis.title = element_text(size=25),
-            plot.margin = unit(c(0,4,0,0), "cm")) +
-      facet_wrap(.~target_soybean_lab, ncol=1) +
-      scale_fill_manual(values = c("#0D0887FF", "#8405A7FF", "#DF6263FF","#F0F921FF"), 
-                        limits=c("Maize-soybean intercropping", "Soybean as sole crop", "Maize as sole crop", "Land saved by intercropping"), 
-                        guide=guide_legend("", nrow = 1, position = "bottom")) +
-      ggtitle("b. Area") +
-      labs(x = "", y = "Total (Mha)") +
-      lims(y=c(0,27))
-    
-  }) ; alloc_surf$`50%`
-
-# Total co-production of maize and soybean in each strategy
-alloc_prod <- res3 %>%
-  filter(pLER_s == 0.56,
-         pLER_m == 0.79,          
-         #target_soybean %in% c(22.50, 33.75), 
-         freq_crop == 0.25) %>% 
-  split(.$target_soybean_lab) %>%
-  map(., ~{
-    
-    # Total production
-    .x %>% 
-      # > re-label crop and strategy 
-      mutate(crop2 = crop,
-             crop2 = factor(crop2, levels = c("intercrop", "landsaving", "crop 2", "crop 1"))) %>% 
-      mutate(crop = if_else(strategy=="intercrop", "Int.", crop),
-             crop = factor(crop, levels = c("Int.", "landsaving", "crop 2", "crop 1"))) %>% 
-      mutate(strategy = recode(strategy, "intercrop"="Int", "sole crop"="SC")) %>% 
-      # > compute total production for intercropping
-      group_by(scenario, target_soybean_lab, target_soybean, crop, crop2, strategy) %>% 
-      summarize(sum=sum(total_production)) %>% 
-      ggplot(data=.) +
-      # > production by crop and by strategy
-      geom_col(aes(x=strategy , y = sum/10^6, fill=crop2, col=crop),
-               width=0.75, linewidth=1) + 
-      # > production target for soybean 
-      geom_hline(aes(yintercept=target_soybean), color="black", linetype = 2, lwd=2) + 
-      annotate("text", x = 2.7, y = as.numeric(as.character(unique(.x$target_soybean))), hjust=0, size=9,
-               label = paste0(unique(.x$target_soybean_lab), "\nsoybean\nself-sufficiency"), 
-               color="black", fontface = 'italic') + 
-      coord_cartesian(clip = "off", xlim = c(1, 2)) + 
-      theme_cowplot() + 
-      theme(strip.background = element_blank(),
-            strip.text = element_blank(),
-            legend.position = "none",
-            panel.border = element_rect(color="black"),
-            title = element_text(size=25),
-            axis.text = element_text(size=25),
-            axis.title = element_text(size=25),
-            plot.margin = unit(c(0,4,0,0), "cm")) +
-      facet_wrap(.~target_soybean_lab, scales = "free", ncol=1) +
-      scale_color_manual(values = c("#0D0887FF", "#F0F921FF", "#DF6263FF","#8405A7FF"), 
-                        guide=guide_legend("", ncol = 2, position = "bottom")) +
-      scale_fill_manual(values = rev(c("#8405A7FF", "#DF6263FF","#F0F921FF")), 
-                        guide=guide_legend("", ncol = 2, position = "bottom")) +
-      ggtitle("c. Production") +
-      labs(x = "", y = "Total (Mt)") +
-      lims(y=c(0,170))
-    
-  }) ; alloc_prod$`50%`
-
-
-# Merge plots
-#leg_p4 <- get_legend(plot = p4_maps$'22.5')
-
-leg_p3 = cowplot::get_plot_component(alloc_surf[[2]], 'guide-box-bottom', return_all = TRUE)
-
-p3 <- plot_grid(plot_grid(alloc_maps_surf_pixel[[2]], 
-                          ggplot() + theme_void(),
-                          plot_grid(ggplot() + theme_void(),
-                                    alloc_surf[[2]] + theme(legend.position = "none"),   
-                                    ggplot() + theme_void(),
-                                    alloc_prod[[2]] + theme(legend.position = "none"), 
-                                    ggplot() + theme_void(),
-                                    nrow=1, rel_widths = c(0.17, 0.25,0.15,0.25,0.18)),  
-                          ncol=1, align="hv", rel_heights = c(0.425,0.05,0.425),
-                          axis = "btrl"), 
-                #cowplot::ggdraw(leg_p3),
-                plot_grid(ggplot() + theme_void(), cowplot::ggdraw(leg_p3), ggplot() + theme_void(), nrow=1, rel_widths = c(0.1,0.75,0.15)),
-                ncol=1, rel_heights = c(0.94,0.06), align="hv", axis = "btrl"
-                )
-# Save
-ggsave(p3,
-       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/03_landsaving.png", 
-       width=22, height=18, bg="white", dpi=300)
-
-ggsave(p3,
-       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/03_landsaving.pdf", 
-       width=18, height=22, bg="white", dpi=300)
-
-# Automatic saving figures for the 3 self-sufficiency levels
-path_fig <- "D:/Mes Donnees/POSTDOC INRAE/PAPERS/02_PNAS/02_Figures/"
-
-for(i in unique(res1$target_soybean_lab))
-{
-  
-  # legend 
-  leg_p3 = cowplot::get_plot_component(alloc_surf[[paste0(i)]], 'guide-box-bottom', return_all = TRUE)
-  # plot
-  p3 <- plot_grid(plot_grid(alloc_maps_surf_pixel[[paste0(i)]], 
-                            ggplot() + theme_void(),
-                            plot_grid(ggplot() + theme_void(),
-                                      alloc_surf[[paste0(i)]] + theme(legend.position = "none"),   
-                                      ggplot() + theme_void(),
-                                      alloc_prod[[paste0(i)]] + theme(legend.position = "none"), 
-                                      ggplot() + theme_void(),
-                                      nrow=1, rel_widths = c(0.17, 0.25,0.15,0.25,0.18)),  
-                            ncol=1, align="hv", rel_heights = c(0.425,0.05,0.425),
-                            axis = "btrl"), 
-                  #cowplot::ggdraw(leg_p3),
-                  plot_grid(ggplot() + theme_void(), cowplot::ggdraw(leg_p3), ggplot() + theme_void(), nrow=1, rel_widths = c(0.1,0.75,0.15)),
-                  ncol=1, rel_heights = c(0.94,0.06), align="hv", axis = "btrl"
-  )
-  # save
-  ggsave(p3,
-         filename = paste0(path_fig, "03_landsaving_", gsub("%", "", i), ".png"), 
-         width=22, height=18, bg="white", dpi=300)
-  
-}
-
-
-
-
-p4 <- plot_grid(
-  plot_grid(p4_surf_barplots[[1]] + annotate("text", x = 2.2, y = num_eu_cropland25-4, 
-                                             label = "25% of\ncroplands\nin the EU", hjust=1,
-                                             color="darkorange", fontface = 'italic', size=7),  
-            p4_prod_barplots[[1]]  + 
-              annotate("text", x = 2.7, y = 11.25+2, hjust=0, size=7,
-                       label = "Soybean\nself-\nsufficiency\ntarget", 
-                       color="red", fontface = 'italic') + 
-              coord_cartesian(clip = "off", xlim = c(1, 2)),  
-            nrow=1, align="hv", axis = "btrl"),
-  plot_grid(p4_surf_barplots[[2]],  p4_prod_barplots[[2]],  nrow=1, align="hv", axis = "btrl"),
-  plot_grid(p4_surf_barplots[[3]],  p4_prod_barplots[[3]],  nrow=1, align="hv", axis = "btrl"), 
-  plot_grid(p4_surf_barplots[[4]],  p4_prod_barplots[[4]],  nrow=1, align="hv", axis = "btrl"), 
-  plot_grid(cowplot::ggdraw(leg_p4), ggplot() + theme_void(), nrow=1),
-  ncol=1, align="hv", axis = "btrl", #labels = c("a.", "b.", "c.", ""), 
-  rel_heights = c(0.18, 0.18, 0.18, 0.18, 0.06)
-) ; p4
-
-# Save
-ggsave(p4,
-       filename = "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/04_landsaving_v2_V2_2.png", 
-       width=18, height=22, bg="white", dpi=300)
 
 # Associated table 
 tab_p4 <- res3 %>%
@@ -674,6 +340,7 @@ tab_p4 <- res3 %>%
   mutate(diff = TOTAL_Intercropping - TOTAL_Sole)
 
 save(tab_p4, file="E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/01_PNAS/FIGURES/04_landsaving_v2.rda")
+
 
 # --------------------------
 # Figure 3. Maximum levels of soybean self-sufficiency reached with intercropping 
