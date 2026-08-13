@@ -20,6 +20,1234 @@ sensi_2_1 <- sensi_allocations ; rm(sensi_allocations)
 load(paste0(path_alloc, "sensi/sensi_2_2.rda"))
 sensi_2_2 <- sensi_allocations ; rm(sensi_allocations)
 
+
+
+
+
+# ----------------------------------------
+# ----------------------------------------
+# Supplementary figures 
+
+# Path for saving supplementary figures
+path_sup <- "E:/POSTDOC INRAE/PAPERS/03_OPTIMIZATION/05_NATURE_COMS/06_R6"
+
+load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_tab_soybean.rda")
+load("E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_tab_maize.rda")
+
+# > Maps 
+# Analyses on the "global" datasets 
+tab_soybean %>%
+  distinct(x,y,country_name) %>% 
+  mutate(desert=if_else(country_name=="Desert", 1, 0)) %>%
+  group_by(desert) %>%
+  count()
+#  desert     n
+#1      0  2626
+#2      1   660
+
+tab_maize %>%
+  distinct(x,y,country_name) %>% 
+  mutate(desert=if_else(country_name=="Desert", 1, 0)) %>%
+  group_by(desert) %>%
+  count()
+#  desert     n
+#1      0  1660
+#2      1   404
+
+
+# > Soybean
+g_s <- ggplot() + 
+  geom_sf(data = world) +
+  geom_point(data = tab_soybean %>% 
+               distinct(x, y, country_name) %>% 
+               mutate(desert=if_else(country_name=="Desert", 
+                                     "Selected sites in geographical areas unsuitable for soybean production (yield = 0 t/ha) (N=660)", 
+                                     "Selected sites in major soybean producing areas (N=2626)")) %>% 
+               mutate(desert=factor(desert, levels = c("Selected sites in major soybean producing areas (N=2626)", "Selected sites in geographical areas unsuitable for soybean production (yield = 0 t/ha) (N=660)"))), 
+             aes(x=x, y=y, color=as.factor(desert)), size=0.1) + 
+  theme_cowplot(rel_small = 0.5, rel_tiny = 0.7, rel_large = 0.8) + 
+  theme(legend.position = "bottom", 
+        #legend.text = element_text(size=9),
+        axis.title = element_blank()) +
+  scale_color_manual(values = c(viridis::viridis(3)[2], "black")) +
+  guides(color=guide_legend(title = "", override.aes = list(size=2), nrow = 2)) +  
+  ggtitle("a.") + 
+  coord_sf(xlim = c(-180, 180), ylim = c(-90, 90), expand = FALSE)
+
+# > Maize
+g_m <- ggplot() + 
+  geom_sf(data = world) +
+  geom_point(data = tab_maize %>% 
+               distinct(x, y, country_name) %>% 
+               mutate(desert=if_else(country_name=="Desert", 
+                                     "Selected sites in geographical areas unsuitable for maize production (yield = 0 t/ha) (N=404)", 
+                                     "Selected sites in maize producing areas in North Hemisphere (N=1660)")) %>% 
+               mutate(desert=factor(desert, levels = c("Selected sites in maize producing areas in North Hemisphere (N=1660)",
+                                                       "Selected sites in geographical areas unsuitable for maize production (yield = 0 t/ha) (N=404)"))), 
+             aes(x=x, y=y, color=as.factor(desert)), size=0.1) + 
+  theme_cowplot(rel_small = 0.5, rel_tiny = 0.7, rel_large = 0.8) + 
+  theme(legend.position = "bottom", 
+        #legend.text = element_text(size=9),
+        axis.title = element_blank()) +
+  scale_color_manual(values = c(viridis::viridis(4)[3], "black")) +
+  guides(color=guide_legend(title = "", override.aes = list(size=2), nrow = 2)) +  
+  ggtitle("b.") + 
+  coord_sf(xlim = c(-180, 180), ylim = c(-90, 90), expand = FALSE)
+
+sp1 <- plot_grid(g_s, g_m, nrow=2, axis="tbrl", align="hv")
+
+ggsave(sp1, 
+       filename = paste0(path_sup, "/Sup_Fig01_maps.png"),
+       width=7, height=9, bg = "white", dpi=300)
+
+# ---------------------------------------
+# Models performances
+
+load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_preds/05_GLOBAL/tab_perf_models.rda")
+
+# > Compute mean performance 
+tab_perf_labelled_i_mean <- tab_perf_labelled %>% 
+  group_by(Outcome, Crop, Model, pred_perf, pred_perf_lab) %>% 
+  # MEAN OF BOTH CROSS-VALIDATION
+  summarise(mean_pred_perf = mean(pred_perf_value)) %>% 
+  ungroup() %>%
+  mutate(Type_cv_lab = "c. Mean of cross-validation results")
+
+# > Performances
+# NSE
+rbind(tab_perf_labelled %>% ungroup() %>% dplyr::select(Outcome, Crop, Model, pred_perf, pred_perf_lab, pred_perf_value, Type_cv_lab),
+      tab_perf_labelled_i_mean %>% dplyr::select(Outcome, Crop, Model, pred_perf, pred_perf_lab, 'pred_perf_value'='mean_pred_perf', Type_cv_lab)) %>% 
+  mutate(Type_cv_lab = recode(Type_cv_lab, 
+                              "Cross-validation on years"="a. Cross-validation on years", 
+                              "Cross-validation on sites"="b. Cross-validation on sites")) %>% 
+  filter(pred_perf_lab=="NSE\n(higher is better)") %>% 
+  spread(key="Type_cv_lab", value="pred_perf_value") %>%
+  arrange(desc(Crop)) %>% 
+  dplyr::select(-Outcome, -pred_perf, -pred_perf_lab)
+
+#  Crop    Model     `a. Cross-validation on years` `b. Cross-validation on sites` `c. Mean of cross-validation results`
+#  soybean pca.m.3                           0.910                          0.939                                 0.925
+#  soybean pca.m.2                           0.919                          0.932                                 0.925
+#  soybean avg.m                             0.900                          0.942                                 0.921
+#  soybean avg.s                             0.913                          0.900                                 0.906
+#  maize   pca.m.3                           0.902                          0.911                                 0.907
+#  maize   pca.m.2                           0.911                          0.905                                 0.908
+#  maize   avg.m                             0.866                          0.917                                 0.892
+#  maize   avg.s                             0.920                          0.872                                 0.896
+
+rbind(tab_perf_labelled %>% ungroup() %>% dplyr::select(Outcome, Crop, Model, pred_perf, pred_perf_lab, pred_perf_value, Type_cv_lab),
+      tab_perf_labelled_i_mean %>% dplyr::select(Outcome, Crop, Model, pred_perf, pred_perf_lab, 'pred_perf_value'='mean_pred_perf', Type_cv_lab)) %>% 
+  mutate(Type_cv_lab = recode(Type_cv_lab, 
+                              "Cross-validation on years"="a. Cross-validation on years", 
+                              "Cross-validation on sites"="b. Cross-validation on sites")) %>% 
+  filter(pred_perf_lab=="RMSEP\n(lower is better)") %>% 
+  spread(key="Type_cv_lab", value="pred_perf_value") %>%
+  arrange(desc(Crop)) %>% 
+  dplyr::select(-Outcome, -pred_perf, -pred_perf_lab)
+
+#  Crop    Model     `a. Cross-validation on years` `b. Cross-validation on sites` `c. Mean of cross-validation results`
+#  soybean pca.m.3                          0.413                          0.342                                 0.377
+#  soybean pca.m.2                          0.394                          0.361                                 0.377
+#  soybean avg.m                            0.437                          0.332                                 0.384
+#  soybean avg.s                            0.407                          0.436                                 0.422
+#  maize   pca.m.3                          1.59                           1.52                                  1.55 
+#  maize   pca.m.2                          1.52                           1.57                                  1.54 
+#  maize   avg.m                            1.86                           1.46                                  1.66 
+#  maize   avg.s                            1.44                           1.82                                  1.63
+
+# ---------------------------------------
+# Models evaluation 
+
+load("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/05_preds/05_GLOBAL/tab_preds.rda")
+
+# > Observed vs predicted - world
+tab_preds_density <- tab_preds %>% 
+  # > compute residuals
+  mutate(Residuals = Predicted - Observed) %>% 
+  # > compute RMSEP and NSE
+  group_by(Type_cv, Crop, Model) %>% 
+  mutate(
+    R2    = caret::R2(obs = Observed,      pred = Predicted),
+    RMSEP = caret::RMSE(obs = Observed,      pred = Predicted),
+    NSE   = hydroGOF::NSE(obs = Observed,    sim = Predicted)
+  ) %>% 
+  mutate(Type_cv = recode(Type_cv, 
+                          "01_YEARS"="Cross-validation on years",
+                          "02_GEO"="Cross-validation on sites"))
+
+plots <- tab_preds_density %>% 
+  filter(Model == "pca.m.2") %>% 
+  split(.$Crop) %>% 
+  map(., ~{ 
+    
+    .x %>% 
+      split(.$Model) %>% 
+      map(., ~{ 
+        
+        # Compute density of points per combination of pred and obs values for each cross-validation strategy
+        tab_preds_density_i <- .x %>% 
+          split(.$Type_cv) %>% 
+          map_dfr(., ~{
+            
+            density <- get_density(x = .x$Observed, y = .x$Predicted, n=100)
+            
+            .x$density <- density
+            
+            .x
+            
+          }, .id = "Type_cv") %>% 
+          dplyr::select(-RMSEP, -NSE, -R2) %>% 
+          left_join(tab_preds_density %>% 
+                      distinct(Type_cv, Crop, Model, Outcome, RMSEP, NSE, R2), 
+                    by=c("Crop", "Model","Outcome", "Type_cv")) %>% 
+          mutate(label=paste0("R²=" , round(R2,2), "\nRMSEP=", round(RMSEP,2), " t ha -1"))
+        
+        mod_i <- unique(tab_preds_density_i$Model)
+        crop_i <- unique(tab_preds_density_i$Crop)
+        
+        
+        # > Pred vs Obs
+        p.pred.obs <- tab_preds_density_i %>%
+          ggplot(data = .) + 
+          geom_point(aes(x = Observed, y = Predicted, color = density), 
+                     size = 0.5) + 
+          geom_abline(color = "red") + 
+          geom_text(x=0.5, y=max(tab_preds_density_i$Predicted)-0.75, 
+                   aes(label=label), hjust=0) + 
+          theme_cowplot() + 
+          theme(legend.position = "bottom",
+                strip.text = element_text(size=10), 
+                #strip.background = element_blank(),
+                title = element_text(size=10),
+                axis.text = element_text(size=10),
+                axis.title.x = element_text(size=10),
+                legend.text = element_text(size=10)
+          ) + 
+          facet_wrap(.~Type_cv, ncol=1) +
+          ggtitle("") +
+          scale_color_viridis_c(guide = guide_colorbar(barwidth = 10, barheight = 0.5)) +
+          labs(x = "Observed yields (t ha -1)", y = "Predicted yields (t ha -1)", color = "Density per combination of\n observed/predicted yield values") 
+        
+        # > Residuals
+        p.res <- tab_preds_density_i %>%
+          # mean residuals 
+          group_by(Crop, Model, Type_cv) %>% 
+          mutate(mean_Residuals = mean(Residuals)) %>% 
+          ggplot(.) + 
+          geom_histogram(aes(x=Residuals), 
+                         bins = 100, fill = "darkgrey", color = "transparent") + 
+          geom_vline(aes(xintercept = mean_Residuals), color = "black", 
+                     linetype = 2, linewidth = 0.5) +
+          theme_cowplot() + 
+          theme(legend.position = "none",
+                strip.text = element_text(size=10), 
+                #strip.background = element_blank(),
+                title = element_text(size=10),
+                axis.text = element_text(size=10),
+                axis.title.x = element_text(size=10)) + 
+          facet_wrap(.~Type_cv, ncol=1) +
+          ggtitle("") +
+          labs(x = "Predicted - observed yields (t ha -1)", y = "Counts") 
+        
+        list("p.pred.obs"=p.pred.obs,
+             "p.res"=p.res)
+        
+        })
+    
+    })
+
+# Scatter plot predicted - observed
+sp2 <- plot_grid(plots$soybean$pca.m.2$p.pred.obs+ggtitle("a."), 
+                 plots$maize$pca.m.2$p.pred.obs+ggtitle("b."), 
+                 nrow=1)
+
+ggsave(plot = sp2, 
+       paste0(path_sup, "/Sup_Fig02_model_perf.png"),
+       width=10, height=10, bg="white", dpi=300)
+
+# Distribution of residuals
+sp3 <- plot_grid(plots$maize$pca.m.2$p.res+ggtitle("a."),
+                   plots$soybean$pca.m.2$p.res+ggtitle("b."), 
+                   nrow=1)
+
+ggsave(plot = sp3, 
+       paste0(path_sup, "/Sup_Fig03_model_perf.png"),
+       width=10, height=9.5, bg="white", dpi=300)
+
+# --------------------------
+# Variables importance
+
+tab_imp <- list("mod_maize_pca.m.2"=mod_maize_pca.m.2, 
+                "mod_soybean_pca.m.2"=mod_soybean_pca.m.2) %>%  
+  map_dfr(., ~{
+    
+    data.frame(Predictor = names(.x$variable.importance), 
+               Importance = .x$variable.importance)
+    
+  }, .id="Model") %>%
+  separate(Model, c("mod", "crop", "model"), sep="_", remove=T) %>%
+  dplyr::select(-mod) %>% 
+  group_by(model, crop) %>%
+  arrange(desc(Importance)) %>%
+  mutate(Rank = 1:n()) %>%
+  mutate(Predictor_lab = recode(Predictor, 
+                                "irrigated_portion_perc"="Crop irrigated portion",
+                                'PC1_month_prec'='Score 1 - total precipitation', 
+                                'PC1_month_min_temp'='Score 1 - min. temperature', 
+                                'PC1_month_max_temp'='Score 1 - max. temperature', 
+                                'PC1_month_vapor_pressure_deficit'='Score 1 - vapor pressure deficit', 
+                                'PC1_month_rad'='Score 1 - radiation', 
+                                'PC1_month_et0'='Score 1 - ref. evapotranspiration', 
+                                'irrigated_portion'='Irrigation', 
+                                'PC2_month_et0'='Score 2 - ref. evapotranspiration', 
+                                'PC2_month_rad'='Score 2 - radiation', 
+                                'PC2_month_min_temp'='Score 2 - min. temperature', 
+                                'PC2_month_vapor_pressure_deficit'='Score 2 - vapor pressure deficit', 
+                                'PC2_month_max_temp'='Score 2 - max. temperature', 
+                                'PC2_month_prec'='Score 2 - total precipitation',
+                                'PC3_month_et0'='Score 3 - ref. evapotranspiration', 
+                                'PC3_month_rad'='Score 3 - radiation', 
+                                'PC3_month_min_temp'='Score 3 - min. temperature', 
+                                'PC3_month_vapor_pressure_deficit'='Score 3 - vapor pressure deficit', 
+                                'PC3_month_max_temp'='Score 3 - max. temperature', 
+                                'PC3_month_prec'='Score 3 - total precipitation')) %>% 
+  mutate(crop = recode(crop, "soybean"="Soybean", "maize"="Maize"), 
+         crop=factor(crop, levels=c("Soybean", "Maize")))
+  
+# Plot
+plot_imp <- tab_imp %>% 
+  split(.$crop) %>% 
+  map(., ~{
+    
+    .x %>% 
+      split(.$model) %>% 
+      map(., ~{
+        
+        # title plot
+        mod_i <- unique(.x$model)
+        crop_i <- unique(.x$crop)
+        
+        # plot
+        .x %>%
+          ggplot(.) + 
+          geom_col(aes(x = Importance, y = reorder(Predictor_lab, Rank, min, decreasing = T)), width=0.75) +
+          theme_cowplot() + 
+          theme(axis.title.y = element_blank(),
+                axis.text = element_text(size=10),
+                panel.grid.major = element_line(color="lightgrey", linewidth=0.5),
+                panel.grid.minor= element_line(color="lightgrey", linewidth=0.25)) +
+          ggtitle("")
+        
+        
+      })
+    
+  })
+
+# Merge 
+sp4 <- plot_grid(
+  plot_imp$Soybean$pca.m.2,
+  plot_imp$Maize$pca.m.2,
+  ncol=2, labels = c("a.", "b.")
+)
+
+# Save
+ggsave(sp4, 
+       filename = paste0(path_sup, "/Sup_Fig04_variable_imp.png"),
+       width = 10, height=5)
+
+# --------------------------------------------------------------------------
+# Partial dependency + correlation with monthly averages
+
+# ----------- To do only once --------------
+# > name variables and abbrevations
+vars_names <- data.frame(clim.var = c("max_2m_temperature", "min_2m_temperature", 
+                                      "et0", "surface_net_solar_radiation", 
+                                      "total_precipitation", "vapor_pressure_deficit")) %>% 
+  mutate(clim.var_abb = recode(clim.var, 
+                               "min_2m_temperature"         ="min_temp",
+                               "max_2m_temperature"         ="max_temp",
+                               "et0"                        ="et0",
+                               "surface_net_solar_radiation"="rad",
+                               "total_precipitation"        ="prec",
+                               "vapor_pressure_deficit"     ="vpd"))  %>% 
+  mutate(clim.var_lab = recode(clim.var, 
+                               "min_2m_temperature"         ="Minimum temperature (°C)",
+                               "max_2m_temperature"         ="Maximum temperature (°C)",
+                               "et0"                        ="Evapotransp. ref (mm/day)",
+                               "surface_net_solar_radiation"="Net solar radiations (MJ/m²)",
+                               "total_precipitation"        ="Total precipitations (mm)",
+                               "vapor_pressure_deficit"     ="Vapor pressure deficit")) %>% 
+  mutate(clim.var_lab2 = recode(clim.var, 
+                                "min_2m_temperature"         ="minimum temperature\n(°C)",
+                                "max_2m_temperature"         ="maximum temperature\n(°C)",
+                                "et0"                        ="evapotranspiration of reference\n(mm/day)",
+                                "surface_net_solar_radiation"="net solar radiations\n(MJ/m²)",
+                                "total_precipitation"        ="total precipitations\n(mm)",
+                                "vapor_pressure_deficit"     ="vapor pressure deficit\n"))
+
+# > Computation pdp for each predictor of each model
+library(pdp) ; library(ranger)
+library(parallel) ; library(doParallel); library(foreach)
+data_path <- "C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/"
+
+# > Soybean
+variable.pdp <- list()
+
+# > setting for parallelization
+n.cores <- parallel::detectCores() - 3 ; n.cores # 7 on the computer, 11 on the laptop
+
+# >>> create the cluster
+my.cluster <- parallel::makeCluster(
+  n.cores, 
+  type = "PSOCK"
+)
+
+# register it to be used by %dopar%
+doParallel::registerDoParallel(cl = my.cluster)
+
+for(var in names(mod_soybean_pca.m.2$variable.importance))
+{ 
+  # > compute pdp for each variable 
+  # (takes long time!)
+  variable.pdp[[paste0(var)]] <- mod_soybean_pca.m.2 %>% 
+    pdp::partial(pred.var = var, train=tab_soybean) %>% 
+    dplyr::rename("value"=1) %>%
+    mutate(variable = var)
+}
+
+# > transform list into dataframe
+variable.pdp.tab <- plyr::ldply(variable.pdp, data.frame, .id = "variable") %>% 
+  mutate(clim.var_abb = if_else(variable != "irrigated_portion", substr(variable, 11, nchar(variable)), variable)) %>%
+  mutate(clim.var_abb = if_else(clim.var_abb == "vapor_pressure_deficit", "vpd", clim.var_abb)) %>% 
+  left_join(., vars_names, by = "clim.var_abb")
+
+# >>> stop cluster//
+stopCluster(my.cluster)
+
+save(variable.pdp.tab, file = paste0(data_path, "06_pdp_imp/best_03_WORLD_soybean.rda"))
+
+rm(variable.pdp, variable.pdp.tab)
+
+# > Maize
+variable.pdp <- list()
+
+# >>> create the cluster
+my.cluster <- parallel::makeCluster(
+  n.cores, 
+  type = "PSOCK"
+)
+
+# register it to be used by %dopar%
+doParallel::registerDoParallel(cl = my.cluster)
+
+for(var in names(mod_maize_pca.m.2$variable.importance))
+{ 
+  # > compute pdp for each variable 
+  # (takes long time!)
+  variable.pdp[[paste0(var)]] <- mod_maize_pca.m.2 %>% 
+    pdp::partial(pred.var = var, train=tab_maize) %>% 
+    dplyr::rename("value"=1) %>%
+    mutate(variable = var)
+}
+
+# > transform list into dataframe
+variable.pdp.tab <- plyr::ldply(variable.pdp, data.frame, .id = "variable") %>% 
+  mutate(clim.var_abb = if_else(variable != "irrigated_portion", substr(variable, 11, nchar(variable)), variable)) %>%
+  mutate(clim.var_abb = if_else(clim.var_abb == "vapor_pressure_deficit", "vpd", clim.var_abb)) %>% 
+  left_join(., vars_names, by = "clim.var_abb")
+
+# >>> stop cluster//
+stopCluster(my.cluster)
+
+save(variable.pdp.tab, file = paste0(data_path, "06_pdp_imp/best_03_WORLD_maize.rda"))
+rm(variable.pdp, variable.pdp.tab)
+
+# ----------- Start here if PDP already computed -----------
+# Correlation between monthly average and PCA scores
+
+# > load PCA scores 
+pca_soybean <- CCMHr::loadRDa("C:/Users/benni/Documents/Post doc/ERA5_daily/soybean/pca_soybean.rda")
+pca_maize   <- CCMHr::loadRDa("C:/Users/benni/Documents/Post doc/ERA5_daily/maize/pca_maize.rda")
+
+# > load PDP
+variable.pdp.tab_soybean <- CCMHr::loadRDa("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/06_pdp_imp/best_03_WORLD_soybean.rda")
+variable.pdp.tab_maize   <- CCMHr::loadRDa("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/06_pdp_imp/best_03_WORLD_maize.rda")
+
+# Eigenvalues of the scores associated 
+# with each principal component
+variable.eig.tab_soybean <- pca_soybean$list_pca_per_variable %>% 
+  map_dfr(., ~{
+    
+    # > Eigenvalues
+    data.frame(CP = paste0("Dim.", 1:length(.x$pca.eig[,2])), 
+               variance.percent = .x$pca.eig[,2])
+    
+  }, .id='var') %>%
+  mutate(CP_lab = paste0("Score ", substr(CP, nchar(CP), nchar(CP)))) %>% 
+  mutate(var = if_else(var == "vapor_pressure_deficit", "vpd", var)) %>% 
+  left_join(., vars_names, by = c("var"="clim.var_abb")) 
+variable.eig.tab_maize <- pca_maize$list_pca_per_variable %>% 
+  map_dfr(., ~{
+    
+    # > Eigenvalues
+    data.frame(CP = paste0("Dim.", 1:length(.x$pca.eig[,2])), 
+               variance.percent = .x$pca.eig[,2])
+    
+  }, .id='var') %>%
+  mutate(CP_lab = paste0("Score ", substr(CP, nchar(CP), nchar(CP)))) %>% 
+  mutate(var = if_else(var == "vapor_pressure_deficit", "vpd", var)) %>% 
+  left_join(., vars_names, by = c("var"="clim.var_abb")) 
+
+# Contribution and correlation of averages climate data
+# with the scores associated with principal components
+variable.contrib.tab_soybean <- pca_soybean$list_pca_per_variable %>% 
+  map_dfr(., ~{
+    
+    # > Contribution + correlation of each variable to the first dimensions
+    .x$pca.var %>% 
+      mutate(metric = rownames(.)) %>%
+      gather(key = "pca_feature_full", value = "value", -metric) %>%
+      separate(col = "pca_feature_full", into = c("pca_feature", "B", "Dim"), remove = T) %>% 
+      unite("CP", B:Dim, sep = ".") %>%
+      spread(key = "pca_feature", value = "value") 
+    
+  }, .id='var') %>% 
+  mutate(var = if_else(var == "vapor_pressure_deficit", "vpd", var)) %>% 
+  mutate(month_lab = paste0("Month ", substr(metric, nchar(metric), nchar(metric)))) %>% 
+  mutate(CP_lab = paste0("Score ", substr(CP, nchar(CP), nchar(CP)))) %>% 
+  left_join(., vars_names, by = c("var"="clim.var_abb"))
+
+variable.contrib.tab_maize <- pca_maize$list_pca_per_variable %>% 
+  map_dfr(., ~{
+    
+    # > Contribution + correlation of each variable to the first dimensions
+    .x$pca.var %>% 
+      mutate(metric = rownames(.)) %>%
+      gather(key = "pca_feature_full", value = "value", -metric) %>%
+      separate(col = "pca_feature_full", into = c("pca_feature", "B", "Dim"), remove = T) %>% 
+      unite("CP", B:Dim, sep = ".") %>%
+      spread(key = "pca_feature", value = "value") 
+    
+  }, .id='var') %>% 
+  mutate(var = if_else(var == "vapor_pressure_deficit", "vpd", var)) %>% 
+  mutate(month_lab = paste0("Month ", substr(metric, nchar(metric), nchar(metric)))) %>% 
+  mutate(CP_lab = paste0("Score ", substr(CP, nchar(CP), nchar(CP)))) %>% 
+  left_join(., vars_names, by = c("var"="clim.var_abb"))
+
+# Variable importance
+variable.imp.tab_soybean <- tab_imp %>%
+  filter(model == "pca.m.2") %>% 
+  filter(crop == "Soybean") %>%
+  mutate(Score_lab = case_when(Predictor %in% c("PC1_month_prec", "PC1_month_min_temp", "PC1_month_max_temp", "PC1_month_vapor_pressure_deficit", "PC1_month_rad", "PC1_month_et0") ~ "Score 1",
+                               Predictor %in% c("PC2_month_prec", "PC2_month_min_temp", "PC2_month_max_temp", "PC2_month_vapor_pressure_deficit", "PC2_month_rad", "PC2_month_et0") ~ "Score 2", 
+                               Predictor == "irrigated_portion" ~ "Crop irrigated fraction")) 
+variable.imp.tab_maize <- tab_imp %>%
+  filter(model == "pca.m.2") %>% 
+  filter(crop == "Maize") %>%
+  mutate(Score_lab = case_when(Predictor %in% c("PC1_month_prec", "PC1_month_min_temp", "PC1_month_max_temp", "PC1_month_vapor_pressure_deficit", "PC1_month_rad", "PC1_month_et0") ~ "Score 1",
+                               Predictor %in% c("PC2_month_prec", "PC2_month_min_temp", "PC2_month_max_temp", "PC2_month_vapor_pressure_deficit", "PC2_month_rad", "PC2_month_et0") ~ "Score 2", 
+                               Predictor == "irrigated_portion" ~ "Crop irrigated fraction")) 
+
+variable.imp.tab_soybean %>%
+  dplyr::select(model, crop, Predictor_lab, Score_lab, Importance, Rank)
+variable.imp.tab_maize %>%
+  dplyr::select(model, crop, Predictor_lab, Score_lab, Importance, Rank)
+
+# > Link pdp and importance 
+variable.pdp.tab_soybean2 <- variable.pdp.tab_soybean %>% 
+  # importance values 
+  left_join(variable.imp.tab_soybean, by = c("variable" = "Predictor")) %>% 
+  # label for irrigation 
+  mutate(clim.var = if_else(Predictor_lab == "Crop irrigated portion", "Crop irrigated portion", clim.var),
+         clim.var_lab = if_else(Predictor_lab == "Crop irrigated portion", "Crop irrigated portion", clim.var_lab),
+         clim.var_lab2 = if_else(Predictor_lab == "Crop irrigated portion", "Crop irrigated portion", clim.var_lab2)) 
+variable.pdp.tab_maize2 <- variable.pdp.tab_maize %>% 
+  # importance values 
+  left_join(variable.imp.tab_maize, by = c("variable" = "Predictor")) %>% 
+  # label for irrigation 
+  mutate(clim.var = if_else(Predictor_lab == "Crop irrigated portion", "Crop irrigated portion", clim.var),
+         clim.var_lab = if_else(Predictor_lab == "Crop irrigated portion", "Crop irrigated portion", clim.var_lab),
+         clim.var_lab2 = if_else(Predictor_lab == "Crop irrigated portion", "Crop irrigated portion", clim.var_lab2)) 
+
+# Graphics 
+# Soybean
+explain_plots_soybean <- variable.pdp.tab_soybean2 %>% 
+  mutate(clim.var_lab = recode(clim.var_lab, 
+                               "Maximum temperature (°C)"="Maximum temperature",
+                               "Minimum temperature (°C)" = "Minimum temperature",
+                               "Evapotransp. ref (mm/day)" = "Evapotransp. ref",
+                               "Net solar radiations (MJ/m²)"="Net solar radiation",
+                               "Total precipitations (mm)" = "Total precipitation")) %>% 
+  split(.$clim.var_abb) %>% 
+  map(., ~{
+    
+    .x %>% 
+      split(.$Score_lab) %>% 
+      map(., ~{
+        
+        var_i <- unique(.x$clim.var_abb)
+        lab_var_i <- unique(.x$clim.var_lab)
+        score_i <- unique(.x$Score_lab)
+        pred_i <- unique(.x$Predictor_lab)
+        imp_i <- round(unique(.x$Importance), 1)
+        rank_i <- unique(.x$Rank)
+        
+        # Contribution and correlation of averages climate data
+        # with the scores associated with principal components
+        p1 <- variable.contrib.tab_soybean %>%
+          filter(var == var_i, 
+                 CP_lab == score_i) %>%
+          # Add explained variance into the graph
+          left_join(variable.eig.tab_soybean, by = c("CP", "CP_lab", "var", "clim.var",  "clim.var_lab", "clim.var_lab2")) %>%
+          mutate(CP_lab2 = paste0(CP_lab, " (", round(variance.percent, 1), "%)"),
+                 contrib_lab = round(contrib, 1),
+                 cor_lab = round(cor, 2)) %>%
+          # Lab with contribution 
+          mutate(nudge_x_lab = if_else(cor < 0, -1, 1),
+                 x_lab = cor + 0.1*nudge_x_lab) %>%
+          # reverse y lab order
+          mutate(month_lab = factor(month_lab, levels = rev(c('Month 1', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6', 'Month 7')))) %>% 
+          # recode
+          mutate(clim.var_lab = recode(clim.var_lab, 
+                                       "Maximum temperature (°C)"="Maximum\ntemperature",
+                                       "Minimum temperature (°C)" = "Minimum\ntemperature",
+                                       "Evapotransp. ref (mm/day)" = "Evapotransp.\nref",
+                                       "Net solar radiations (MJ/m²)"="Net solar\nradiation",
+                                       "Total precipitations (mm)" = "Total\nprecipitation",
+                                       "Vapor pressure deficit"="Vapor pressure\ndeficit"), 
+                 clim.var_lab = paste0(clim.var_lab, "\n\nImportance score:\n", imp_i)) %>% 
+          # Plot
+          ggplot(., aes(x = month_lab, y = cor, 
+                        label = cor_lab)) + 
+          geom_hline(yintercept = 0, color="darkgrey", linetype = 2) + 
+          geom_col(fill = "lightgrey", color="black", width = 0.75) + 
+          geom_text(aes(y = x_lab), color = "black", size=2.5) + 
+          theme_cowplot() +
+          theme(panel.grid = element_blank(),
+                legend.position = "bottom",
+                strip.placement = "outside", 
+                strip.text.y.left = element_text(angle = 0, size=10),
+                axis.title.y = element_blank(),
+                axis.title.x = element_text(size=10),
+                axis.text = element_text(size=10)) +
+          coord_flip() + 
+          facet_grid(clim.var_lab~., switch = "y") +
+          labs(y = paste0("Correlation between monthly averages and ", score_i)) + 
+          lims(y = c(-1.1, 1.1))
+        
+        # plot PDP
+        p2 <- .x %>% 
+          ggplot(.) +
+          geom_line(aes(x = value, y = yhat)) + 
+          theme_cowplot() + 
+          theme(axis.title = element_text(size=10),
+                axis.text = element_text(size=10), 
+                panel.grid.major = element_line(color="lightgrey", linewidth=0.5),
+                panel.grid.minor= element_line(color="lightgrey", linewidth=0.25)) +
+          labs(x = paste0(score_i), y = "Predicted yield\n(t/ha)") + 
+          lims(y = c(1, 2.5))
+        
+        list("contrib" = p1, 
+             "pdp" = p2)
+        
+        
+      })
+    
+  })
+
+# order in which the plots are displayed
+variable.imp.tab_soybean %>% ungroup() %>%
+  dplyr::select(Predictor_lab, Rank)
+
+#1 Score 1 - average precipitation       1
+#2 Score 1 - vapor pressure deficit      2
+#3 Score 1 - min. temperature            3
+#4 Score 1 - max. temperature            4
+#5 Score 1 - radiation                   5
+#6 Score 1 - ref. evapotranspiration     6
+#7 Crop irrigated portion                7
+#8 Score 2 - ref. evapotranspiration     8
+#9 Score 2 - radiation                   9
+#10 Score 2 - min. temperature           10
+#11 Score 2 - vapor pressure deficit     11
+#12 Score 2 - max. temperature           12
+#13 Score 2 - average precipitation      13
+
+# > scores 1
+sp5 <- plot_grid(
+  #plot_grid(
+  # contrib
+  plot_grid(explain_plots_soybean$prec$`Score 1`$contrib + 
+              theme(legend.position = "none") +
+              ggtitle("a."), 
+            explain_plots_soybean$vpd$`Score 1`$contrib + theme(legend.position = "none"), 
+            explain_plots_soybean$min_temp$`Score 1`$contrib + theme(legend.position = "none"), 
+            explain_plots_soybean$max_temp$`Score 1`$contrib + theme(legend.position = "none"), 
+            explain_plots_soybean$rad$`Score 1`$contrib + theme(legend.position = "none"), 
+            explain_plots_soybean$et0$`Score 1`$contrib + theme(legend.position = "none"), 
+            ncol=1, rel_heights = c(0.17, 0.15, 0.15, 0.15, 0.15, 0.15)),
+  # pdp
+  plot_grid(explain_plots_soybean$prec$`Score 1`$pdp +
+              ggtitle("b."), 
+            explain_plots_soybean$vpd$`Score 1`$pdp, 
+            explain_plots_soybean$min_temp$`Score 1`$pdp, 
+            explain_plots_soybean$max_temp$`Score 1`$pdp, 
+            explain_plots_soybean$rad$`Score 1`$pdp, 
+            explain_plots_soybean$et0$`Score 1`$pdp,
+            ncol=1, rel_heights = c(0.17, 0.15, 0.15, 0.15, 0.15, 0.15)), 
+  # settings
+  align="hv", axis="trlb", 
+  rel_widths = c(0.55,0.45)
+  # legend
+  #, plot_grid(get_legend(explain_plots$prec$`Score 1`$contrib), ggplot() + theme_void(), nrow=1),
+  #ncol=1, rel_heights = c(0.95, 0.05)
+)
+
+ggsave(sp5, 
+       filename=paste0(path_sup, "/Sup_Fig05_pdp_soybean_1.png"), 
+       width = 11.5, height=13, dpi=300, bg="white")
+
+# ---------------------------------------------------------
+# > score 2
+sp6 <- plot_grid(
+  #plot_grid(
+  # contrib
+  plot_grid(explain_plots_soybean$et0$`Score 2`$contrib + 
+              theme(legend.position = "none") +
+              ggtitle("a."), 
+            explain_plots_soybean$rad$`Score 2`$contrib + theme(legend.position = "none"), 
+            explain_plots_soybean$min_temp$`Score 2`$contrib + theme(legend.position = "none"), 
+            explain_plots_soybean$vpd$`Score 2`$contrib + theme(legend.position = "none"), 
+            explain_plots_soybean$max_temp$`Score 2`$contrib + theme(legend.position = "none"), 
+            explain_plots_soybean$prec$`Score 2`$contrib + theme(legend.position = "none"), 
+            ncol=1, rel_heights = c(0.17, 0.15, 0.15, 0.15, 0.15, 0.15)),
+  # pdp
+  plot_grid(explain_plots_soybean$et0$`Score 2`$pdp +
+              ggtitle("b."), 
+            explain_plots_soybean$rad$`Score 2`$pdp, 
+            explain_plots_soybean$min_temp$`Score 2`$pdp, 
+            explain_plots_soybean$vpd$`Score 2`$pdp, 
+            explain_plots_soybean$max_temp$`Score 2`$pdp, 
+            explain_plots_soybean$prec$`Score 2`$pdp,
+            ncol=1, rel_heights = c(0.17, 0.15, 0.15, 0.15, 0.15, 0.15)), 
+  # settings
+  align="hv", axis="trlb", 
+  rel_widths = c(0.55,0.45)
+)
+
+ggsave(sp6, 
+       filename=paste0(path_sup, "/Sup_Fig06_pdp_soybean_2.png"), 
+       width = 11.5, height=13, dpi=300, bg="white")
+
+# ---------------------------------------------------------
+# Maize
+explain_plots_maize <- variable.pdp.tab_maize2 %>% 
+  mutate(clim.var_lab = recode(clim.var_lab, 
+                               "Maximum temperature (°C)"="Maximum temperature",
+                               "Minimum temperature (°C)" = "Minimum temperature",
+                               "Evapotransp. ref (mm/day)" = "Evapotransp. ref",
+                               "Net solar radiations (MJ/m²)"="Net solar radiation",
+                               "Total precipitations (mm)" = "Total precipitation")) %>% 
+  split(.$clim.var_abb) %>% 
+  map(., ~{
+    
+    .x %>% 
+      split(.$Score_lab) %>% 
+      map(., ~{
+        
+        var_i <- unique(.x$clim.var_abb)
+        lab_var_i <- unique(.x$clim.var_lab)
+        score_i <- unique(.x$Score_lab)
+        pred_i <- unique(.x$Predictor_lab)
+        imp_i <- round(unique(.x$Importance), 1)
+        rank_i <- unique(.x$Rank)
+        
+        # Contribution and correlation of averages climate data
+        # with the scores associated with principal components
+        p1 <- variable.contrib.tab_maize %>%
+          filter(var == var_i, 
+                 CP_lab == score_i) %>%
+          # Add explained variance into the graph
+          left_join(variable.eig.tab_maize, by = c("CP", "CP_lab", "var", "clim.var",  "clim.var_lab", "clim.var_lab2")) %>%
+          mutate(CP_lab2 = paste0(CP_lab, " (", round(variance.percent, 1), "%)"),
+                 cor_lab = round(cor, 2)) %>%
+          # Lab with contribution 
+          mutate(nudge_x_lab = if_else(cor < 0, -1, 1),
+                 x_lab = cor + 0.1*nudge_x_lab) %>%
+          # reverse y lab order
+          mutate(month_lab = factor(month_lab, levels = rev(c('Month 1', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6', 'Month 7', 'Month 8')))) %>% 
+          # recode
+          mutate(clim.var_lab = recode(clim.var_lab, 
+                                       "Maximum temperature (°C)"="Maximum\ntemperature",
+                                       "Minimum temperature (°C)" = "Minimum\ntemperature",
+                                       "Evapotransp. ref (mm/day)" = "Evapotransp.\nref",
+                                       "Net solar radiations (MJ/m²)"="Net solar\nradiation",
+                                       "Total precipitations (mm)" = "Total\nprecipitation",
+                                       "Vapor pressure deficit"="Vapor pressure\ndeficit"), 
+                 clim.var_lab = paste0(clim.var_lab, "\n\nImportance score:\n", imp_i)) %>% 
+          # Plot
+          ggplot(., aes(x = month_lab, y = cor, 
+                        label = cor_lab)) + 
+          geom_hline(yintercept = 0, color="darkgrey", linetype = 2) + 
+          geom_col(fill = "lightgrey", color="black", width = 0.75) + 
+          geom_text(aes(y = x_lab), color = "black", size=2.5) + 
+          theme_cowplot() +
+          theme(panel.grid = element_blank(),
+                legend.position = "bottom",
+                strip.placement = "outside", 
+                strip.text.y.left = element_text(angle = 0, size=10),
+                axis.title.y = element_blank(),
+                axis.title.x = element_text(size=10),
+                axis.text = element_text(size=10)) +
+          coord_flip() + 
+          facet_grid(clim.var_lab~., switch = "y") +
+          labs(y = paste0("Correlation between monthly averages and ", score_i)) + 
+          lims(y = c(-1.1, 1.1))
+        
+        # plot PDP
+        p2 <- .x %>% 
+          ggplot(.) +
+          geom_line(aes(x = value, y = yhat)) + 
+          theme_cowplot() + 
+          theme(axis.title = element_text(size=10),
+                axis.text = element_text(size=10), 
+                panel.grid.major = element_line(color="lightgrey", linewidth=0.5),
+                panel.grid.minor= element_line(color="lightgrey", linewidth=0.25)) +
+          labs(x = paste0(score_i), y = "Predicted yield\n(t/ha)") + 
+          lims(y = c(4.5, 8.5))
+        
+        list("contrib" = p1, 
+             "pdp" = p2)
+        
+        
+      })
+    
+  })
+
+
+# Soybean
+variable.imp.tab_maize %>% ungroup() %>%
+  dplyr::select(Predictor_lab, Rank)
+
+# 1 Score 1 - average precipitation       1
+# 2 Crop irrigated portion                2
+# 3 Score 1 - min. temperature            3
+# 4 Score 1 - ref. evapotranspiration     4
+# 5 Score 1 - max. temperature            5
+# 6 Score 1 - vapor pressure deficit      6
+# 7 Score 1 - radiation                   7
+# 8 Score 2 - ref. evapotranspiration     8
+# 9 Score 2 - min. temperature            9
+#10 Score 2 - radiation                  10
+#11 Score 2 - average precipitation      11
+#12 Score 2 - vapor pressure deficit     12
+#13 Score 2 - max. temperature           13
+
+# > scores 1
+sp7 <- plot_grid(
+  #plot_grid(
+  # contrib
+  plot_grid(explain_plots_maize$prec$`Score 1`$contrib + 
+              theme(legend.position = "none") +
+              ggtitle("a."), 
+            explain_plots_maize$min_temp$`Score 1`$contrib + theme(legend.position = "none"), 
+            explain_plots_maize$et0$`Score 1`$contrib + theme(legend.position = "none"), 
+            explain_plots_maize$max_temp$`Score 1`$contrib + theme(legend.position = "none"), 
+            explain_plots_maize$vpd$`Score 1`$contrib + theme(legend.position = "none"), 
+            explain_plots_maize$rad$`Score 1`$contrib + theme(legend.position = "none"), 
+            ncol=1, rel_heights = c(0.17, 0.15, 0.15, 0.15, 0.15, 0.15)),
+  # pdp
+  plot_grid(explain_plots_maize$prec$`Score 1`$pdp +
+              ggtitle("b."), 
+            explain_plots_maize$min_temp$`Score 1`$pdp, 
+            explain_plots_maize$et0$`Score 1`$pdp,
+            explain_plots_maize$max_temp$`Score 1`$pdp, 
+            explain_plots_maize$vpd$`Score 1`$pdp, 
+            explain_plots_maize$rad$`Score 1`$pdp, 
+            ncol=1, rel_heights = c(0.17, 0.15, 0.15, 0.15, 0.15, 0.15)), 
+  # settings
+  align="hv", axis="trlb", 
+  rel_widths = c(0.55,0.45)
+  # legend
+  #, plot_grid(get_legend(explain_plots$prec$`Score 1`$contrib), ggplot() + theme_void(), nrow=1),
+  #ncol=1, rel_heights = c(0.95, 0.05)
+)
+
+ggsave(sp7, 
+       filename=paste0(path_sup, "/Sup_Fig07_pdp_maize_1.png"), 
+       width = 11.5, height=13, dpi=300, bg="white")
+
+# > score 2
+# 8 Score 2 - ref. evapotranspiration     8
+# 9 Score 2 - min. temperature            9
+#10 Score 2 - radiation                  10
+#11 Score 2 - average precipitation      11
+#12 Score 2 - vapor pressure deficit     12
+#13 Score 2 - max. temperature           13
+
+# ---------------------------------------------------------
+sp8 <- plot_grid(
+  #plot_grid(
+  # contrib
+  plot_grid(explain_plots_maize$et0$`Score 2`$contrib + 
+              theme(legend.position = "none") +
+              ggtitle("a."), 
+            explain_plots_maize$min_temp$`Score 2`$contrib + theme(legend.position = "none"), 
+            explain_plots_maize$rad$`Score 2`$contrib + theme(legend.position = "none"), 
+            explain_plots_maize$prec$`Score 2`$contrib + theme(legend.position = "none"), 
+            explain_plots_maize$vpd$`Score 2`$contrib + theme(legend.position = "none"), 
+            explain_plots_maize$max_temp$`Score 2`$contrib + theme(legend.position = "none"), 
+            ncol=1, rel_heights = c(0.17, 0.15, 0.15, 0.15, 0.15, 0.15)),
+  # pdp
+  plot_grid(explain_plots_maize$et0$`Score 2`$pdp +
+              ggtitle("b."), 
+            explain_plots_maize$min_temp$`Score 2`$pdp, 
+            explain_plots_maize$rad$`Score 2`$pdp, 
+            explain_plots_maize$prec$`Score 2`$pdp,
+            explain_plots_maize$vpd$`Score 2`$pdp, 
+            explain_plots_maize$max_temp$`Score 2`$pdp, 
+            ncol=1, rel_heights = c(0.17, 0.15, 0.15, 0.15, 0.15, 0.15)), 
+  # settings
+  align="hv", axis="trlb", 
+  rel_widths = c(0.55,0.45)
+  # legend
+  #, plot_grid(get_legend(explain_plots$prec$`Score 1`$contrib), ggplot() + theme_void(), nrow=1),
+  #ncol=1, rel_heights = c(0.95, 0.05)
+)
+
+ggsave(sp8, 
+       filename=paste0(path_sup, "/Sup_Fig08_pdp_maize_2.png"), 
+       width = 11.5, height=13, dpi=300, bg="white")
+
+# ------------------------------------------------------#
+# -------------   {Sensitivity analyses}   -------------#
+# ------------------------------------------------------#
+
+
+# Sup Fig 10. Maize-soybean intercropping and sole cropping allocation
+# for 25, 50, 75, and 100% soybean self-sufficiency
+
+# > Maps of allocation 
+tab_alloc_main_analysis <- res1 %>% 
+  # > Keep the data for the figure (reference values)
+  filter(pLER_s == 0.56,
+         pLER_m == 0.79, 
+         freq_crop == 0.25) %>% 
+      # > keep usefull columns 
+      dplyr::select(x, y, target_soybean_lab, pixel_intercropping, pixel_solecropping, pixel_intercropping_free, pixel_landsaving, area) %>% 
+      gather(key = pixel_type, value = pixel_color, starts_with("pixel_")) %>%
+      mutate(Crop_Design_lab = case_when(
+        pixel_type == "pixel_intercropping"      ~ "Maize-soybean\nintercropping", 
+        pixel_type == "pixel_solecropping"       ~ "Soybean\nas sole crop", 
+        pixel_type == "pixel_intercropping_free" ~ "Maize\nas sole crop",
+        pixel_type == "pixel_landsaving"         ~ "Land saved\nby intercropping"))
+
+theme_for_sup_map <- theme_cowplot() + 
+  theme(strip.background = element_rect(fill="lightgrey", color="transparent"),
+        strip.text.x = element_text(size=8),
+        strip.text.y.left = element_text(size=8, angle=0),
+        strip.placement = "outside",
+        axis.title = element_blank(),
+        axis.text = element_text(size=4),
+        legend.text = element_text(size=7),
+        legend.title = element_text(size=7),
+        legend.title.position = "top",
+        title = element_text(size=8),
+        plot.margin = unit(c(0,0,0,0), "cm")) 
+
+sp10 <- plot_grid(
+  # > Intercropping
+  ggplot() +
+    geom_sf(data=eu27, fill="grey35", color="transparent") +
+    geom_tile(data = tab_alloc_main_analysis %>% filter(pixel_type == "pixel_intercropping"), 
+              aes(x=x, y=y, fill = pixel_color*area/10^3, alpha=as.factor(pixel_color))) +
+    scale_fill_gradientn(colours = c("white", "#0D0887FF"), 
+                         guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", 
+                                              barwidth=4.5, barheight=0.25), limits = c(0,180)) +
+    geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
+    coord_sf(xlim = c(-11, 35), ylim = c(33,71), expand = FALSE) + 
+    theme_for_sup_map +
+    facet_grid(target_soybean_lab ~ Crop_Design_lab, switch = "y")+
+    guides(alpha = guide_none()),
+  # > Sole soybean
+  ggplot() +
+    geom_sf(data=eu27, fill="grey35", color="transparent") +
+    geom_tile(data = tab_alloc_main_analysis %>% filter(pixel_type == "pixel_solecropping"), 
+              aes(x=x, y=y, fill = pixel_color*area/10^3, alpha=as.factor(pixel_color))) +
+    scale_fill_gradientn(colours = c("white", "#8405A7FF"), 
+                         guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", 
+                                              barwidth=4.5, barheight=0.25), limits = c(0,180)) +
+    geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
+    coord_sf(xlim = c(-11, 35), ylim = c(33,71), expand = FALSE) + 
+    theme_for_sup_map +
+    theme(strip.background.y = element_blank(),
+          strip.text.y.left = element_blank()) +
+    facet_grid(target_soybean_lab ~ Crop_Design_lab, switch = "y")+
+    guides(alpha = guide_none()), 
+  # > Sole maize
+  ggplot() +
+    geom_sf(data=eu27, fill="grey35", color="transparent") +
+    geom_tile(data = tab_alloc_main_analysis %>% filter(pixel_type == "pixel_intercropping_free"), 
+              aes(x=x, y=y, fill = pixel_color*area/10^3, alpha=as.factor(pixel_color))) +
+    scale_fill_gradientn(colours = c("white", "#DF6263FF"), 
+                         guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", 
+                                              barwidth=4.5, barheight=0.25), limits = c(0,180)) +
+    geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
+    coord_sf(xlim = c(-11, 35), ylim = c(33,71), expand = FALSE) + 
+    theme_for_sup_map +
+    theme(strip.background.y = element_blank(),
+          strip.text.y.left = element_blank()) +
+    facet_grid(target_soybean_lab ~ Crop_Design_lab, switch = "y")+
+    guides(alpha = guide_none()),
+  # > Land saving
+  ggplot() +
+    geom_sf(data=eu27, fill="grey35", color="transparent") +
+    geom_tile(data = tab_alloc_main_analysis %>% filter(pixel_type == "pixel_landsaving"), 
+              aes(x=x, y=y, fill = pixel_color*area/10^3, alpha=as.factor(pixel_color))) +
+    scale_fill_gradientn(colours = c("white", "#F0F921FF"), 
+                         guide=guide_colorbar("Area (1000 ha)", nrow = 1, position = "bottom", 
+                                              barwidth=4.5, barheight=0.25), limits = c(0,180)) +
+    geom_sf(data = not_eu27, color = NA, fill = "white",size = 0.2) + geom_sf(data = ocean, color = NA, fill = "white",size = 0.2) + geom_sf(data = europe, fill="transparent", color="white") +
+    coord_sf(xlim = c(-11, 35), ylim = c(33,71), expand = FALSE) + 
+    theme_for_sup_map +
+    theme(strip.background.y = element_blank(),
+          strip.text.y.left = element_blank()) +
+    facet_grid(target_soybean_lab ~ Crop_Design_lab, switch = "y")+
+    guides(alpha = guide_none()),
+  nrow=1, align = "v"
+)
+
+
+ggsave(sp10, 
+       filename = paste0(path_sup, "/Sup_Fig10_areas_covered.png"), 
+       width=19, height=20, bg="white", units = "cm", dpi=300)
+
+
+# -------------------------
+# > sensitivity analysis taking into account the impact of 
+# N fertilisation and temporal niche differenciation (TND)
+# on pLERs and how robust are conclusions
+
+# > Soybean allocations assuming a N fertilization rate applied on monocropped maize
+load(paste0(path_alloc, "sensi/sensi_5_3.rda"))
+sensi_5_3 <- sensi_allocations ; rm(sensi_allocations)
+
+# > Soybean allocations assuming a TND of 0 
+# (both crops are intercropped on the same temporal niche)
+load(paste0(path_alloc, "sensi/sensi_6_1.rda"))
+sensi_6_1 <- sensi_allocations ; rm(sensi_allocations)
+
+# > Allocations and area requierements
+alloc_sensi_5_6 <- list("Main analysis"                  = allocations,
+                        "Sensitivity analysis - N ferti" = sensi_5_3,
+                        "Sensitivity analysis - TND"     = sensi_6_1)
+
+# > Shapping allocations results
+# Allocations
+sensi_5_data_res <- format_alloc(results_allocations =  alloc_sensi_5_6 %>% 
+                                   map_dfr(., ~{ 
+                                     
+                                     map_dfr(.x, ~{ .x$data_res }, .id="scenario")
+                                     
+                                   }, .id="sensi_set")) %>% 
+  # > Set of sensitivity analyses
+  mutate(sensi_set_lab = recode(sensi_set, 
+                                "Main analysis"                  = "Main analysis: reference pLERs values of 0.56 and 0.79",
+                                "Sensitivity analysis - N ferti" = "pLERs values computed according to a N application rates for maize in the EU",
+                                "Sensitivity analysis - TND"     = "pLERs values of 0.53 and 0.76,\ncorresponding to a temporal niche differentiation of zero (i.e., both species are sown and harvested at the same time)")) %>% 
+  mutate(sensi_set_lab = factor(sensi_set_lab, levels=c("Main analysis: reference pLERs values of 0.56 and 0.79",
+                                                        "pLERs values computed according to a N application rates for maize in the EU",
+                                                        "pLERs values of 0.53 and 0.76,\ncorresponding to a temporal niche differentiation of zero (i.e., both species are sown and harvested at the same time)")))
+
+# Surface required to cover different shares of 
+#    EU's consumption of soybean 
+sensi_5_res1 <- format_alloc(results_allocations =  alloc_sensi_5_6 %>% 
+                               map_dfr(., ~{ 
+                                 
+                                 map_dfr(.x, ~{ .x$res1 }, .id="scenario")
+                                 
+                               }, .id="sensi_set")) %>%
+  # > Set of sensitivity analyses
+  mutate(sensi_set_lab = recode(sensi_set, 
+                                "Main analysis"                  = "Main analysis: reference pLERs values of 0.56 and 0.79",
+                                "Sensitivity analysis - N ferti" = "pLERs values computed according to a N application rates for maize in the EU",
+                                "Sensitivity analysis - TND"     = "pLERs values of 0.53 and 0.76,\ncorresponding to a temporal niche differentiation of zero (i.e., both species are sown and harvested at the same time)")) %>% 
+  mutate(sensi_set_lab = factor(sensi_set_lab, levels=c("Main analysis: reference pLERs values of 0.56 and 0.79",
+                                                        "pLERs values computed according to a N application rates for maize in the EU",
+                                                        "pLERs values of 0.53 and 0.76,\ncorresponding to a temporal niche differentiation of zero (i.e., both species are sown and harvested at the same time)")))
+
+# Surface required to produce the same production (maize+soybean)
+#    as intercropping 
+sensi_5_res3 <- format_alloc(results_allocations =  alloc_sensi_5_6 %>% 
+                               map_dfr(., ~{ 
+                                 
+                                 map_dfr(.x, ~{ .x$res3 }, .id="scenario")
+                                 
+                               }, .id="sensi_set")) %>%
+  # > Set of sensitivity analyses
+  mutate(sensi_set_lab = recode(sensi_set, 
+                                "Main analysis"                  = "Main analysis: reference pLERs values of 0.56 and 0.79",
+                                "Sensitivity analysis - N ferti" = "pLERs values computed according to a N application rates for maize in the EU",
+                                "Sensitivity analysis - TND"     = "pLERs values of 0.53 and 0.76,\ncorresponding to a temporal niche differentiation of zero (i.e., both species are sown and harvested at the same time)")) %>% 
+  mutate(sensi_set_lab = factor(sensi_set_lab, levels=c("Main analysis: reference pLERs values of 0.56 and 0.79",
+                                                        "pLERs values computed according to a N application rates for maize in the EU",
+                                                        "pLERs values of 0.53 and 0.76,\ncorresponding to a temporal niche differentiation of zero (i.e., both species are sown and harvested at the same time)")))
+
+
+
+# > Compare with main analysis
+# SURFACES & PRODUCTION
+sensi_5_res1 %>% 
+  mutate(to_keep = case_when(
+    pLER_lab %in% c("0.56 - 0.79") & freq_crop == 0.25 ~1,
+    pLER_lab %in% c("0.525 - 0.755") & freq_crop == 0.25 ~1,
+    sensi_set == "Sensitivity analysis - N ferti" & freq_crop == 0.25 ~1,
+    TRUE~0
+  )) %>% 
+  filter(to_keep==1) %>%  
+  dplyr::select(sensi_set_lab, target_soybean_lab, crop, strategy, surface, production) %>% 
+  mutate(surface=surface*10^-6,
+         production=production*10^-6) %>%
+  gather(key=indic, value = value, surface, production) %>%
+  pivot_wider(names_from = c(strategy, crop), values_from = value) %>% 
+  arrange(sensi_set_lab, indic, target_soybean_lab) %>% View(.)
+
+
+sensi_5_res3 %>% 
+  mutate(to_keep = case_when(
+    pLER_lab %in% c("0.56 - 0.79") & freq_crop == 0.25 ~1,
+    pLER_lab %in% c("0.525 - 0.755") & freq_crop == 0.25 ~1,
+    sensi_set == "Sensitivity analysis - N ferti" & freq_crop == 0.25 ~1,
+    TRUE~0
+  )) %>% 
+  filter(to_keep==1) %>% 
+  dplyr::select(sensi_set_lab, target_soybean_lab, crop, strategy, total_surface, total_production) %>% 
+  mutate(total_surface    = total_surface*10^-6,
+         total_production = total_production*10^-6) %>%
+  gather(key=indic, value = value, total_surface, total_production) %>%
+  pivot_wider(names_from = c(strategy, crop), values_from = value) %>% 
+  arrange(sensi_set_lab, indic, target_soybean_lab) %>% View(.)
+
+
+# Supplementary Figure 12. Levels of soybean and maize self-sufficiency in the EU
+# achieved from intercropping depending on pLER and crop frequency
+sp12 <- sensi_5_res1 %>% 
+  # > Keep results for the plot
+  mutate(to_keep = case_when(
+    pLER_lab %in% c("0.56 - 0.79") ~1,
+    pLER_lab %in% c("0.525 - 0.755") ~1,
+    sensi_set == "Sensitivity analysis - N ferti" ~1,
+    TRUE~0
+  )) %>% 
+  filter(to_keep==1) %>% 
+  filter(target_soybean_lab == "100%",  # soybean target production = 100% consumption
+         strategy == "Intercropping"    # intercropping
+  ) %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(target_soybean = if_else(crop=="Soybean", target_soybean, 85.1), 
+         perc_eu_supply=(production/(target_soybean*10^6))*100) %>% 
+  mutate(crop=recode(crop,"Soybean"="a.", "Maize"="b.")) %>% 
+  mutate(freq_crop_lab=recode(freq_crop_lab, 
+                              "1 year in 7"="1/7",
+                              "1 year in 6"="1/6",
+                              "1 year in 5"="1/5",
+                              "1 year in 4"="1/4",
+                              "1 year in 2"="1/2",
+                              "1 year in 3"="1/3")) %>%
+  mutate(line_shape = if_else(pLER_lab=="0.56 - 0.79", 1, 2)) %>% 
+  # > Plot
+  ggplot(., aes(x = freq_crop_lab, 
+                y = perc_eu_supply,
+                group=sensi_set_lab)) +
+  geom_hline(yintercept = c(25,50,75,100,125,150), 
+             linetype=2, 
+             color = "grey90") +
+  geom_line(aes(color=as.factor(sensi_set_lab), linetype = as.factor((line_shape))),
+            linewidth=0.75) +
+  geom_point(aes(color=as.factor(sensi_set_lab), 
+                 shape=as.factor(sensi_set_lab)), 
+             size=2, fill="white") +
+  scale_color_manual(values = pal[c(4, 1, 5)]) +
+  scale_linetype_manual(values=c(1,2), guide=guide_none()) +
+  scale_y_continuous(breaks = c(25,50,75,100,125,150)) +
+  scale_shape_manual(values = c(15, 24, 25)) +
+  guides(color = guide_legend(title = "", ncol=1, reverse = F),
+         shape=guide_legend(title = "", ncol=1, reverse = F)) +
+  theme_cowplot() +
+  theme(strip.text.x = element_text(size=11, hjust = 0, face = "bold"),
+        strip.background = element_rect(fill = "transparent"),
+        axis.text = element_text(size=11),
+        axis.title = element_text(size=11),
+        legend.position = "bottom",
+        legend.title = element_text(size=11),
+        legend.text = element_text(size=10)) +
+  facet_wrap(.~crop, scales="free_y") +
+  labs(x = "Years with intercropping", y = "Self-sufficiency level (%)\n") 
+
+ggsave(sp12, 
+       filename = paste0(path_sup, "/Sup_Fig12_perc_self_suf_sensi_N.png"),
+       bg="white", width=9, height = 5, dpi=300)
+
+sensi_5_res1 %>% 
+  # > Keep results for the plot
+  mutate(to_keep = case_when(
+    pLER_lab %in% c("0.56 - 0.79") ~1,
+    pLER_lab %in% c("0.525 - 0.755") ~1,
+    sensi_set == "Sensitivity analysis - N ferti" ~1,
+    TRUE~0
+  )) %>% 
+  filter(to_keep==1,
+         target_soybean_lab == "100%",  # soybean target production = 100% consumption
+         strategy == "Intercropping"    # intercropping
+  ) %>%
+  # > Self-sufficiency coverage for each scenario 
+  mutate(target_soybean = if_else(crop=="Soybean", target_soybean, 85.1), 
+         perc_eu_supply=(production/(target_soybean*10^6))*100) %>% 
+  # > Min and max % 
+  group_by(sensi_set, crop) %>% 
+  summarise(min = min(perc_eu_supply),
+            max = max(perc_eu_supply))
+
+# Supplementary Table 3
+# Results for the sensitivity analysis with increased N fertilisation  
+sensi_5_res3 %>% 
+  filter(pLER_lab %in% c("0.504716 - 0.78328"), 
+         freq_crop == 0.25) %>% 
+  dplyr::select(target_soybean_lab, crop, strategy, total_surface, total_production) %>% 
+  mutate(total_surface    = total_surface*10^-6,
+         total_production = total_production*10^-6) %>%
+  gather(key=indic, value = value, total_surface, total_production) %>%
+  pivot_wider(names_from = c(strategy, crop), values_from = value) %>% 
+  arrange(indic, target_soybean_lab) %>% View(.)
+
+# Supplementary Table 4
+# Results for the sensitivity analysis with TND=0
+sensi_5_res3 %>% 
+  filter(pLER_lab %in% c("0.525 - 0.755"), 
+         freq_crop == 0.25) %>% 
+  dplyr::select(target_soybean_lab, crop, strategy, total_surface, total_production) %>% 
+  mutate(total_surface    = total_surface*10^-6,
+         total_production = total_production*10^-6) %>%
+  gather(key=indic, value = value, total_surface, total_production) %>%
+  pivot_wider(names_from = c(strategy, crop), values_from = value) %>% 
+  arrange(indic, target_soybean_lab)  %>% View(.)
+
+# target_soybean_lab indic         `intercrop_crop 1` `intercrop_crop 2` `sole crop_crop 1` `sole crop_crop 2` `sole crop_landsaving`
+#1 25%                total_produc…               9.08              29.6                9.08              20.4                   9.30 
+#2 50%                total_produc…              18.2               65.5               18.2               45.1                  20.4  
+#3 75%                total_produc…              27.2              102.                27.3               68.5                  27.0  
+#4 100%               total_produc…              31.1              118.                36.3               65.0                   5.33 
+#5 25%                total_surface               6.76               6.76               3.41               3.35                  1.38 
+#6 50%                total_surface              14.1               14.1                7.11               6.98                  3.24 
+#7 75%                total_surface              21.6               21.6               10.9               10.7                   4.24 
+#8 100%               total_surface              25.0               25.0               14.8               10.2                   0.857
+
+
+
+
+
+# ------------------------------------------------------------
+
 # > Allocations and area requierements
 alloc_sensi_1 <- list("Areas with soybean mean yield equal or higher than 1.0 t.ha-1 (EU)"          = allocations,
                       "Areas with soybean mean yield equal or higher than 2.6 t.ha-1 (EU)"          = sensi_1,
