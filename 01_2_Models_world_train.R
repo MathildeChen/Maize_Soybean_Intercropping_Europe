@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------------
 # 
 #       01-2. Train predictive models on full dataset
-#       Author: M. Chen, Inrae, 2024  
+#       Author: M. Chen, CIRAD, 2024-2026  
 # 
 # -------------------------------------------------------------------------
 
@@ -16,15 +16,18 @@ library(hydroGOF)
 
 # -------------------------------------------------------------------------
 
+# Update path where the dataset for analyses are saved
+path_to_data <- "..."
+
 # ----------------------------------
 # Data 
 # Soybean
 # > add specific path to the project
-load(".../data/00_tab_soybean.rda")
+load(paste0(path_to_data, "/00_DATA/00_tab_soybean.rda"))
 
 # Maize
 # > add specific path to the project
-load(".../data/00_tab_maize.rda")
+load(paste0(path_to_data, "/00_tab_maize.rda"))
 
 # ----------------------------------
 # Data to use for models fitting
@@ -85,7 +88,7 @@ list_models %>%
                    importance="impurity") 
     
     # > indicate the correct path where to save the outputs
-    save(mod, file = paste0(".../", crop, "_", model_name, "_train.rda"))
+    save(mod, file = paste0(path_to_data, "/, crop, "_", model_name, "_train.rda"))
 
 })
 
