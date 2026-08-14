@@ -14,7 +14,7 @@ library(tidyverse) ; library(terra) ; library(raster)
 path_to_ferti_data <- "..."
 
 # Path where the dataset for analyses will be saved
-path_to_data
+path_to_data <- "..."
 
 # -------------------
 # Gridded fertilizer rates applied downloaded from https://doi.org/10.6084/m9.figshare.24616050
