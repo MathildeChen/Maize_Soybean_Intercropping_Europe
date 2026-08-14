@@ -28,7 +28,7 @@ path_to_yield_data <- "..."
 path_to_irrigation_data <- "..."
 
 # Path where the dataset for analyses will be saved
-path_to_data
+path_to_data <- "..."
 
 # ----------------------------------------
 # Compute monthly averages from daily averages
