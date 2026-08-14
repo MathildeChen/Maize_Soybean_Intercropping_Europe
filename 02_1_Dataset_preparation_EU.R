@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------------
 # 
 #       02-1. Prepare data containing yield, climate, and irrigation data in EU
-#       Author: M. Chen, Inrae, 2024
+#       Author: M. Chen, CIRAD, 2024
 #         
 # -------------------------------------------------------------------------
 
