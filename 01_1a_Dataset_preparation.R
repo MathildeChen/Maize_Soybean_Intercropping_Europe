@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------------
 # 
 #       01-1a. Prepare data containing yield, climate, and irrigation data  
-#       Author: M. Chen, Inrae, 2024
+#       Author: M. Chen, Cirad, 2024-2026
 #
 # -------------------------------------------------------------------------
 
@@ -17,6 +17,18 @@ library(caret) ; library(ranger) ; library(fastshap)
 # Homemade function to read daily climate data from ERA5-land dataset. 
 source(".../functions_to_read_era5.R")
 
+# Update the path to climate data 
+path_to_climate_data <- "..."
+
+# Update the path to yield data 
+path_to_yield_data <- "..."
+
+# Update the path to irrigation data 
+path_to_irrigation_data <- "..."
+
+# Path where the dataset for analyses will be saved
+path_to_data
+
 # ----------------------------------------
 # Compute monthly averages from daily averages
 
@@ -29,7 +41,7 @@ monthly_average <- function(var_i,
   if(load==TRUE)
   {
     if(is.null(crop) == T){ message("No crop is provided in the arguments") } 
-    data <- loadRDa(paste0("C:/Users/benni/Documents/Post doc/ERA5_daily/", crop, "/era5daily_data_", var_i, ".rda"))
+    data <- loadRDa(paste0(path_to_climate_data, crop, "/era5daily_data_", var_i, ".rda"))
   }
   
   # > or use the data provided
@@ -63,7 +75,7 @@ monthly_average <- function(var_i,
 
 # -------------------
 # Yield
-load("E:/POSTDOC INRAE/DATA/02_YIELDS/GDHY_v1.3/yield_no.trend_full.rda")
+load(paste0(path_to_yield_data, "/GDHY_v1.3/yield_no.trend_full.rda"))
 
 # > check if there is some duplicate (normally no)
 data_crop %>% 
@@ -93,7 +105,7 @@ length(unique(yield_m$gridcode)) # 2139
 #length(unique(yield_m[which(yield_m$country_name == "Desert"),]$gridcode)) # 405
 
 # > load 1 initial yield file to resample era5 data 
-yield_ref <- rast("E:/POSTDOC INRAE/DATA/02_YIELDS/GDHY_v1.3/gdhy_v1.2_v1.3_20190128/maize/yield_1981.nc4")
+yield_ref <- rast(paste0(path_to_yield_data, "/GDHY_v1.3/gdhy_v1.2_v1.3_20190128/maize/yield_1981.nc4"))
 
 # -------------------------------------------------------------------------
 # Outliers in the yield datasets
@@ -174,7 +186,7 @@ yield_m_corrected %>%
 # -------------------
 # Irrigation
 # Soybean 
-raster_irrigation_s <- raster::raster("E:/POSTDOC INRAE/DATA/02_YIELDS/SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_SOYB_I.tif"); raster_irrigation_s
+raster_irrigation_s <- raster::raster(paste0(path_to_irrigation_data, "/SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_SOYB_I.tif")); raster_irrigation_s
 #class      : RasterLayer 
 #dimensions : 2160, 4320, 9331200  (nrow, ncol, ncell)
 #resolution : 0.083333, 0.083333  (x, y)
@@ -213,7 +225,7 @@ summary(irrigation_s_tab$irrigated_portion_perc)
 # 0.000000  0.000000  0.000000  0.005443  0.000000 22.159389
 
 # > Maize
-raster_irrigation_m <- raster::raster("E:/POSTDOC INRAE/DATA/02_YIELDS/SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_MAIZ_I.tif"); raster_irrigation_m
+raster_irrigation_m <- raster::raster(paste0(path_to_irrigation_data, "/SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_MAIZ_I.tif")); raster_irrigation_m
 #class      : RasterLayer 
 #dimensions : 2160, 4320, 9331200  (nrow, ncol, ncell)
 #resolution : 0.083333, 0.083333  (x, y)
@@ -298,7 +310,7 @@ for(var_i in c('max_2m_temperature', 'min_2m_temperature', 'surface_net_solar_ra
   {
     
     # > Load climatic data
-    era5_var_i <- loadRDa(paste0("C:/Users/benni/Documents/Post doc/ERA5_daily/", crop ,"/era5daily_data_", var_i_abb, ".rda")) # %>% filter(site_year %in% unique(yield_s$site_year))
+    era5_var_i <- loadRDa(paste0(path_to_climate_data, , crop ,"/era5daily_data_", var_i_abb, ".rda")) 
     
     # > Compute monthly averages 
     tab_month_annual <- monthly_average(var_i = var_i, 
@@ -329,7 +341,7 @@ for(var_i in c('max_2m_temperature', 'min_2m_temperature', 'surface_net_solar_ra
   {
     
     # > Load climatic data
-    era5_var_i <- loadRDa(paste0("C:/Users/benni/Documents/Post doc/ERA5_daily/", crop, "/era5monthly_data_prec.rda"))
+    era5_var_i <- loadRDa(paste0(path_to_climate_data, crop, "/era5monthly_data_prec.rda"))
     
     # > Change format of monthly data 
     tab_month_annual <- era5_var_i %>% 
@@ -364,7 +376,7 @@ for(var_i in c('max_2m_temperature', 'min_2m_temperature', 'surface_net_solar_ra
   
 } 
 
-# > check
+# > Checks
 list_climate %>% map(., ~{ names(.x)})
 
 list_climate$max_temp$year_max_2m_temperature     <- list_climate$max_temp$year_average
@@ -387,11 +399,12 @@ tab_climate <- list_climate$min_temp %>%
   left_join(., list_climate$prec     %>% dplyr::select(-year_average), by = c("site_year", "x", "y", "gridcode", "country_name")) %>% 
   left_join(., list_climate$vpd_1    %>% dplyr::select(-year_average), by = c("site_year", "x", "y", "gridcode", "country_name")) 
 
+# > Checks
 summary(tab_climate)
 
-#tab_climate_s <- tab_climate %>% 
-#  filter(site_year %in% unique(yield_s_corrected$site_year))
-#dim(tab_climate_s) # 116516     
+tab_climate_s <- tab_climate %>% 
+  filter(site_year %in% unique(yield_s_corrected$site_year))
+dim(tab_climate_s) # 116516     
 
 tab_climate_m <- tab_climate %>% 
   filter(site_year %in% unique(yield_m_corrected$site_year))
@@ -417,7 +430,7 @@ pca_scores <- function_pca(type_data = "M",
                            cum_clim.var = F)
 
 # > save pca object to retrieve the scores
-save(pca_scores, file = paste0("C:/Users/benni/Documents/Post doc/ERA5_daily/soybean/pca_soybean.rda"))
+save(pca_scores, file = paste0(path_to_climate_data, "/soybean/pca_soybean.rda"))
 
 # add site-year label
 pca_scores$tab_PCA_scores$site_year <- tab_climate_pca$site_year
@@ -449,7 +462,7 @@ pca_scores$list_pca_per_variable$min_temp$pca$rotation # 7 PC
 pca_scores$tab_PCA_scores$site_year <- tab_climate_pca$site_year
 
 # > save pca object to retrieve the scores
-save(pca_scores, file = paste0("C:/Users/benni/Documents/Post doc/ERA5_daily/maize/pca_maize.rda"))
+save(pca_scores, file = paste0(path_to_climate_data, "/maize/pca_maize.rda"))
 
 summary(pca_scores$tab_PCA_scores) # mean 0
 
@@ -482,6 +495,6 @@ summary(tab_maize)
 
 # -------------------------------------------------------------------------
 # Save 
-save(tab_soybean, file = "E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_tab_soybean.rda")
-save(tab_maize, file = "E:/POSTDOC INRAE/ANALYSES/B_OPTIMISATION/00_Data/00_tab_maize.rda")
+save(tab_soybean, file = paste0(path_to_data, "/00_Data/00_tab_soybean.rda"))
+save(tab_maize,   file = paste0(path_to_data, "/00_Data/00_tab_maize.rda"))
 
