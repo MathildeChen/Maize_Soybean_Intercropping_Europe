@@ -2,7 +2,7 @@
 # 
 #       01-1c. Prepare data containing fertilization data for soybean and maize
 #              Script added during the review process
-#       Author: M. Chen, Inrae, 2026
+#       Author: M. Chen, CIRAD, 2026
 #
 # -------------------------------------------------------------------------
 
@@ -10,12 +10,19 @@
 # > Packages
 library(tidyverse) ; library(terra) ; library(raster)
 
+# Update the path to fertilzer data 
+path_to_ferti_data <- "..."
+
+# Path where the dataset for analyses will be saved
+path_to_data
+
 # -------------------
 # Gridded fertilizer rates applied downloaded from https://doi.org/10.6084/m9.figshare.24616050
-# Reference: Nguyen, T.H., Tang, F.H.M., Conchedda, G. et al. NPKGRIDS: a global georeferenced dataset of N, P2O5, and K2O fertilizer application rates for 173 crops. Sci Data 11, 1179 (2024). https://doi.org/10.1038/s41597-024-04030-4 
+# Reference: Nguyen, T.H., Tang, F.H.M., Conchedda, G. et al. NPKGRIDS: a global georeferenced dataset of N, P2O5, and K2O fertilizer application rates for 173 crops. 
+#            Sci Data 11, 1179 (2024). https://doi.org/10.1038/s41597-024-04030-4 
 
 # > Soybean 
-all_data_fertilization_s <- rast(".../NPKGRIDSv1.08_soybean.nc")
+all_data_fertilization_s <- rast(paste0(path_to_ferti_data, "/NPKGRIDSv1.08_soybean.nc"))
 # Several rasters are included in the file 
 names(all_data_fertilization_s) 
 
@@ -56,7 +63,7 @@ fertilization_s_tab <- data.frame(values(agg_fertilization_s$Nrate),
 
 # -------------
 # > Maize
-all_data_fertilization_m <- rast(".../NPKGRIDSv1.08_maize.nc")
+all_data_fertilization_m <- rast(paste0(path_to_ferti_data, "/NPKGRIDSv1.08_maize.nc"))
 # Several rasters are included in the file 
 names(all_data_fertilization_m) 
 
@@ -98,5 +105,5 @@ fertilization_m_tab <- data.frame(values(agg_fertilization_m$Nrate),
 
 # -------------------------------------------------------------------------
 # Save 
-save(fertilization_s_tab, file = ".../data/03_Nrate_soybean.rda")
-save(fertilization_m_tab, file = ".../data/03_Nrate_maize.rda")
+save(fertilization_s_tab, file = paste0(path_to_data, "00_DATA/03_Nrate_soybean.rda"))
+save(fertilization_m_tab, file = paste0(path_to_data, "00_DATA/03_Nrate_maize.rda"))
