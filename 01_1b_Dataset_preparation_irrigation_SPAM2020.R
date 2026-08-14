@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------------
 # 
 #       01-1b. Prepare data containing yield, climate, and irrigation data  
-#       Author: M. Chen, Inrae, 2024
+#       Author: M. Chen, CIRAD, 2024-2026
 #
 # -------------------------------------------------------------------------
 
@@ -14,11 +14,21 @@ library(parallel) ; library(doParallel); library(foreach)
 # > machine learning
 library(caret) ; library(ranger) ; library(fastshap)
 
+# Home-made functions performing the dimension reductions
 # Homemade function to read daily climate data from ERA5-land dataset. 
-source(".../functions_to_read_era5.R")
+source(".../00_Functions.R")
 
-# path to climate data
-climate_data <- "..."
+# Update the path to climate data 
+path_to_climate_data <- "..."
+
+# Update the path to yield data 
+path_to_yield_data <- "..."
+
+# Update the path to irrigation data 
+path_to_irrigation_data <- "..."
+
+# Path where the dataset for analyses will be saved
+path_to_data
 
 # ----------------------------------------
 # Compute monthly averages from daily averages
@@ -32,7 +42,7 @@ monthly_average <- function(var_i,
   if(load==TRUE)
   {
     if(is.null(crop) == T){ message("No crop is provided in the arguments") } 
-    data <- loadRDa(paste0(climate_data, "/", crop, "/era5daily_data_", var_i, ".rda"))
+    data <- loadRDa(paste0(path_to_climate_data, "/", crop, "/era5daily_data_", var_i, ".rda"))
   }
   
   # > or use the data provided
@@ -66,7 +76,7 @@ monthly_average <- function(var_i,
 
 # -------------------
 # Yield data without trend
-load(".../GDHY_v1.3/yield_no.trend_full.rda")
+load(paste0(path_to_yield_data, "/GDHY_v1.3/yield_no.trend_full.rda"))
 
 # > check if there is some duplicate (normally no)
 data_crop %>% 
@@ -181,7 +191,7 @@ yield_m_corrected %>%
 # retrieved from the SPAM dataset (accessible at: https://doi.org/10.7910/DVN/PRFF8V)
 
 # Soybean 
-raster_irrigation_s <- raster::raster(".../SPAM2020/Global_Geotiff/spam2020V1r0_global_harvested_area.geotiff/spam2020V1r0_global_harvested_area/spam2020_v1r0_global_H_SOYB_I.tif"); raster_irrigation_s
+raster_irrigation_s <- raster::raster(paste0(path_to_irrigation_data, "/SPAM2020/Global_Geotiff/spam2020V1r0_global_harvested_area.geotiff/spam2020V1r0_global_harvested_area/spam2020_v1r0_global_H_SOYB_I.tif")); raster_irrigation_s
 #class      : RasterLayer 
 #dimensions : 2160, 4320, 9331200  (nrow, ncol, ncell)
 #resolution : 0.08333333, 0.08333333  (x, y)
@@ -220,7 +230,7 @@ summary(irrigation_s_tab$irrigated_portion_perc)
 # 0.00000  0.00000  0.00000  0.01814  0.00000 48.85600
 
 # > Maize
-raster_irrigation_m <- raster::raster(".../SPAM2020/Global_Geotiff/spam2020V1r0_global_harvested_area.geotiff/spam2020V1r0_global_harvested_area/spam2020_v1r0_global_H_MAIZ_I.tif"); raster_irrigation_m
+raster_irrigation_m <- raster::raster(paste0(path_to_irrigation_data, "/SPAM2020/Global_Geotiff/spam2020V1r0_global_harvested_area.geotiff/spam2020V1r0_global_harvested_area/spam2020_v1r0_global_H_MAIZ_I.tif")); raster_irrigation_m
 #class      : RasterLayer 
 #dimensions : 2160, 4320, 9331200  (nrow, ncol, ncell)
 #resolution : 0.08333333, 0.08333333  (x, y)
@@ -305,7 +315,7 @@ for(var_i in c('max_2m_temperature', 'min_2m_temperature', 'surface_net_solar_ra
   {
     
     # > Load climatic data
-    era5_var_i <- loadRDa(paste0(data_climate, "/", crop ,"/era5daily_data_", var_i_abb, ".rda")) # %>% filter(site_year %in% unique(yield_s$site_year))
+    era5_var_i <- loadRDa(paste0(path_to_climate_data, "/", crop ,"/era5daily_data_", var_i_abb, ".rda")) # %>% filter(site_year %in% unique(yield_s$site_year))
     
     # > Compute monthly averages 
     tab_month_annual <- monthly_average(var_i = var_i, 
@@ -336,7 +346,7 @@ for(var_i in c('max_2m_temperature', 'min_2m_temperature', 'surface_net_solar_ra
   {
     
     # > Load climatic data
-    era5_var_i <- loadRDa(paste0(data_climate, "/", crop, "/era5monthly_data_prec.rda"))
+    era5_var_i <- loadRDa(paste0(path_to_climate_data, "/", crop, "/era5monthly_data_prec.rda"))
     
     # > Change format of monthly data 
     tab_month_annual <- era5_var_i %>% 
@@ -406,8 +416,6 @@ dim(tab_climate_m) # 72964
 
 # -------------------------------------------------------------------------
 # PCA on monthly averages 
-# Home-made functions performing the dimension reductions
-source(".../00_Functions_dimension_reduction.R")
 
 # Only select the site_years that are in the Yield data 
 # > soybean 
@@ -424,7 +432,7 @@ pca_scores <- function_pca(type_data = "M",
                            cum_clim.var = F)
 
 # > save pca object to retrieve the scores
-save(pca_scores, file = paste0(".../soybean/pca_soybean.rda"))
+save(pca_scores, file = paste0(path_to_climate_data, "/soybean/pca_soybean.rda"))
 
 # add site-year label
 pca_scores$tab_PCA_scores$site_year <- tab_climate_pca$site_year
@@ -456,7 +464,7 @@ pca_scores$list_pca_per_variable$min_temp$pca$rotation # 7 PC
 pca_scores$tab_PCA_scores$site_year <- tab_climate_pca$site_year
 
 # > save pca object to retrieve the scores
-save(pca_scores, file = paste0(".../maize/pca_maize.rda"))
+save(pca_scores, file = paste0(path_to_climate_data, "/maize/pca_maize.rda"))
 
 summary(pca_scores$tab_PCA_scores) # mean 0
 
@@ -489,6 +497,6 @@ summary(tab_maize)
 
 # -------------------------------------------------------------------------
 # Save 
-save(tab_soybean, file = ".../data/00_tab_soybean_spam2020.rda")
-save(tab_maize,   file = ".../data/00_tab_maize_spam2020.rda")
+save(tab_soybean, file = paste0(path_to_data, "00_DATA/00_tab_soybean_spam2020.rda"))
+save(tab_maize,   file = paste0(path_to_data, "00_DATA/00_tab_maize_spam2020.rda"))
 
