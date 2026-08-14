@@ -15,11 +15,24 @@ library(parallel) ; library(doParallel); library(foreach)
 library(caret) ; library(ranger) ; library(fastshap)
 
 # Home-made functions performing the dimension reductions
-source(".../00_Functions_dimension_reduction.R")
+source(".../00_0_Functions.R")
 
-# > path to climatic data
-path_day <- "..."
+# ----------------------------------------
+# Data 
+
+# > Update paths to re-computed climatic variables 
+path_day   <- "..."
 path_month <- "..."
+
+# Update the path to irrigation data 
+path_to_irrigation_data <- "..."
+
+# Path where the dataset with detrended yields are saved
+path_to_data_inputs <- "..."
+
+# Path where the dataset for analyses will be saved
+path_to_data <- "..."
+
 
 # ----------------------------------------
 # Compute monthly averages from daily averages
@@ -69,7 +82,7 @@ monthly_average <- function(var_i,
 # retrieved from the SPAM dataset (accessible at: https://doi.org/10.7910/DVN/PRFF8V)
 
 # Soybean 
-raster_irrigation_s <- raster::raster(".../SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_SOYB_I.tif"); raster_irrigation_s
+raster_irrigation_s <- raster::raster(paste0(path_to_irrigation_data, "/SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_SOYB_I.tif")); raster_irrigation_s
 #class      : RasterLayer 
 #dimensions : 2160, 4320, 9331200  (nrow, ncol, ncell)
 #resolution : 0.083333, 0.083333  (x, y)
@@ -108,7 +121,7 @@ summary(irrigation_s_tab$irrigated_portion_perc)
 # 0.000000  0.000000  0.000000  0.005443  0.000000 22.159389
 
 # > Maize
-raster_irrigation_m <- raster::raster(".../SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_MAIZ_I.tif"); raster_irrigation_m
+raster_irrigation_m <- raster::raster(paste0(path_to_irrigation_data, "/SPAM/spam2010v2r0_global_harv_area.geotiff/spam2010V2r0_global_H_MAIZ_I.tif")); raster_irrigation_m
 #class      : RasterLayer 
 #dimensions : 2160, 4320, 9331200  (nrow, ncol, ncell)
 #resolution : 0.083333, 0.083333  (x, y)
@@ -300,7 +313,7 @@ tab_climate_EU_soybean <- tab_climate_EU %>%
 names(tab_climate_EU_soybean)
 
 # Load PCA loads and scores derived from PCA on monthly averages at global scale
-load(".../data/00_tab_soybean.rda")
+load(paste0(path_to_data_inputs, "/00_DATA/00_tab_soybean.rda"))
 pca_soybean <- loadRDa(paste0(path_day, "/soybean/pca_soybean.rda"))
 
 # change name for vpd_1
@@ -382,7 +395,7 @@ tab_climate_EU_maize <- tab_climate_EU %>%
 names(tab_climate_EU_maize)
 
 # Load PCA loads and scores derived from PCA on monthly averages at global scale
-load(".../data/00_tab_maize.rda")
+load(paste0(path_to_data_inputs, "/00_DATA/00_tab_maize.rda"))
 pca_soybean <- loadRDa(paste0(path_day, "/maize/pca_maize.rda"))
 
 pca_maize$list_pca_per_variable$vpd_1 <- pca_maize$list_pca_per_variable$vapor_pressure_deficit
@@ -499,8 +512,8 @@ summary(tab_maize_EU)
 
 # ---------------------
 # Save
-save(tab_soybean_EU, file = ".../data/02_tab_eu_soybean.rda")
-save(tab_maize_EU, file = ".../data/02_tab_eu_maize.rda")
+save(tab_soybean_EU, file = paste0(path_to_data, "/00_DATA/02_tab_eu_soybean.rda"))
+save(tab_maize_EU,   file = paste0(path_to_data, "/00_DATA/02_tab_eu_maize.rda"))
 
 # ---------------------
 stop()
