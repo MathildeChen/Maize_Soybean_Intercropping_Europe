@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------------
 # 
 #       01-3. Evaluate predictive models on full dataset
-#       Author: M. Chen, Inrae, 2024  
+#       Author: M. Chen, CIRAD, 2024-2026  
 # 
 # -------------------------------------------------------------------------
 
@@ -21,13 +21,17 @@ source(".../00_0_Functions.R")
 # ----------------------------------
 # Data containing predictors for both crops
 
+# Update path where the dataset for analyses are saved
+path_to_data <- "..."
+
+# Data 
 # Soybean
 # > add specific path to the project
-load(".../data/00_tab_soybean.rda")
+load(paste0(path_to_data, "/00_DATA/00_tab_soybean.rda"))
 
 # Maize
 # > add specific path to the project
-load(".../data/00_tab_maize.rda")
+load(paste0(path_to_data, "/00_tab_maize.rda"))
 
 # Yield projections 
 # > indicate the path to yield projections 
@@ -36,7 +40,6 @@ path_proj <- "..."
 # Performance metrics 
 # > indicate the path to save the predictions of yield for each model -> will be used for the evaluation
 path_predictions <- "..."
-
 
 
 # ----------------------------------
