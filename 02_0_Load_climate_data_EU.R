@@ -16,13 +16,16 @@ library(parallel) ; library(doParallel); library(foreach)
 library(CCMHr) 
 
 # Homemade function to read daily climate data from ERA5-land dataset. 
-source(".../functions_to_read_era5.R")
+source(".../00_0_Functions.R")
 
 # ----------------------------------------
 # Data 
 
-# > path to climatic data
-path_day <- "..."
+# > Update path to daily climatic data from ERA5
+path_to_era5_data <- "..."
+
+# > Update paths to re-computed climatic variables 
+path_day   <- "..."
 path_month <- "..."
 
 # > load 1 initial yield file to resample era5 data 
@@ -30,7 +33,7 @@ path_month <- "..."
 yield_ref <- rast(".../GDHY_v1.3/gdhy_v1.2_v1.3_20190128/maize/yield_1981.nc4")
 
 # > coordinates
-load(".../data/00_dat_coords_EU42.rda")
+load(".../00_DATA/00_dat_coords_EU42.rda")
 dat_coords_EU <- dat_coords_eu42
 
 dat_coords_EU <- dat_coords_EU %>%
@@ -213,7 +216,7 @@ for(y in 2000:2023)
 {
   
   # > Load data
-  era5daily_correct_y <- loadRDa(paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/01_days/temp_eu/vpd_1_temp/era5daily_vpd_1_", y, "_EU.rda"))
+  era5daily_correct_y <- loadRDa(paste0(path_to_era5_data, "/vpd_1_temp/era5daily_vpd_1_", y, "_EU.rda"))
   
   # > Store in a list
   list_vpd_1_temp[[paste0(y)]] <- era5daily_correct_y
@@ -241,7 +244,7 @@ era5daily_correct %>%
   summary() # 244 lines per site-year per year 
 
 save(era5daily_correct, 
-     file = paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/01_days/temp_eu/era5daily_vpd_1_EU.rda"))
+     file = paste0(path_to_era5_data, "temp_eu/era5daily_vpd_1_EU.rda"))
 
 rm(era5daily_init, era5daily_correct)
 
@@ -287,7 +290,7 @@ for(y in 2000:2023)
 {
   
   # > Load data
-  era5daily_correct_y <- loadRDa(paste0("C:/Users/benni/Documents/Post doc/ERA5_data_comp_models/01_days/temp_eu/et0_temp/era5daily_et0_", y, "_EU.rda"))
+  era5daily_correct_y <- loadRDa(paste0(path_to_era5_data, "/et0_temp/era5daily_et0_", y, "_EU.rda"))
   
   # > Store in a list
   list_et0_temp[[paste0(y)]] <- era5daily_correct_y
