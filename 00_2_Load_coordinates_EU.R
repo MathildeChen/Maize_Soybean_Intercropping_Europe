@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------------
 #           
-#     SET OF PIXELS USED FOR MAKE PROJECTIONS OF YIELD IN EUROPE    
-#                       (EU27 and EU27 extended)
+#     00-2. DEFINITION OF THE SET OF PIXELS USED FOR CROPS YIELD PROJECTIONS IN EUROPE    
+#                       (EU27 and EU27 extended to neighborhing countries)
 # -------------------------------------------------------------------------
 
 # -------------------------------------------------------------------------
