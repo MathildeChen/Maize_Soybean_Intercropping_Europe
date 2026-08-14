@@ -1,3 +1,11 @@
+# -------------------------------------------------------------------------
+# 
+#       00-1. FUNCTION TO PERFORM SOYBEAN AND MAIZE ALLOCATION
+#             IN THE EU - INTERCROPPING and SOLE CROPPING 
+#       Author: M. Chen, CIRAD, 2023-2026  
+# 
+# -------------------------------------------------------------------------
+
 # ALLOCATION OF 1 CROP SPECIES
 # The objective is to produce a target quantity of a given crop species
 # in a given region (e.g., country, continent).  
