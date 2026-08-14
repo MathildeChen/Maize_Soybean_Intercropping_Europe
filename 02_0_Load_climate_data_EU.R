@@ -2,7 +2,7 @@
 #
 #       02-0. ERA5-Land daily daily climatic data 2000-2023 for EU
 #       Merge data from individual .nc to global dataset 
-#       Author: M. Chen, Inrae, 2024 
+#       Author: M. Chen, CIRAD, 2024 
 #         
 # -------------------------------------------------------------------------
 
